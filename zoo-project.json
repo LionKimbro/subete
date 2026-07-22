@@ -1,0 +1,21 @@
+{
+  "zookeep-project-guid": "5b6a618d-4bf6-4497-b2d4-4347b73a13fe",
+  "name": "subete",
+  "repo-type": "python-2026-03",
+  "license": "CC0-1.0",
+  "repository": {
+    "name": "subete",
+    "visibility": "public"
+  },
+  "python": {
+    "distribution": {
+      "name": "m1-subete"
+    },
+    "import-packages": [
+      {
+        "name": "subete",
+        "path": "src/subete"
+      }
+    ]
+  }
+}
