@@ -991,7 +991,7 @@ The memberships are already correct.
 
 Recovery may leave their entry-level generation values unchanged because those particular memberships were last changed at generation `42`.
 
-Recovery then replaces the global cache generation record.
+Recovery then writes the global cache record as prepared but not current.
 
 ## Updated `link-cache/generation.json`
 
@@ -999,13 +999,14 @@ Recovery then replaces the global cache generation record.
 {
   "link-cache-format-version": 1,
   "database-id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  "generation": 43,
+  "generation": 42,
   "updated": "2026-07-24T00:12:02Z",
-  "state": "current"
+  "state": "updating",
+  "target-generation": 43
 }
 ```
 
-This declares that the complete cache has been checked and represents the intended generation `43` world.
+This declares that cache-entry changes have been checked and prepared for target generation `43`, while published cache generation remains `42`.
 
 The committed database generation is still `42` until journal commitment.
 
@@ -1068,6 +1069,20 @@ The recognized database generation advances:
 ```
 
 The transaction is now committed.
+
+## Cache-Current Publication
+
+Recovery now publishes the cache as current for the committed generation:
+
+```json
+{
+  "link-cache-format-version": 1,
+  "database-id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "generation": 43,
+  "updated": "2026-07-24T00:12:03Z",
+  "state": "current"
+}
+```
 
 ---
 

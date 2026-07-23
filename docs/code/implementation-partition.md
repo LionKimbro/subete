@@ -624,7 +624,7 @@ It provides:
 * all-attached link lookup;
 * transaction consequence planning;
 * application of link-cache changes;
-* generation recording;
+* two-phase cache-generation publication: prepare `updating`, then publish `current` after journal commitment;
 * stale-state detection;
 * complete rebuilding from authoritative link entities.
 

@@ -238,12 +238,27 @@ Recommended states include:
 ```text
 absent
 stale
+updating
 rebuilding
 current
 error
 ```
 
-The recorded generation identifies the committed database generation represented by the cache.
+The recorded generation identifies the last committed database generation published as current by the cache.
+
+When `state` is `"updating"`, status may also include `target-generation`. This reports prepared cache work that is not yet published as current; ordinary link lookup must not treat the cache as current until its state becomes `"current"` at the database generation.
+
+#### `target-generation`
+
+```json
+{
+  "type": "integer",
+  "required": "when link-cache.state is updating",
+  "minimum": 0
+}
+```
+
+The target database generation for prepared cache work. It is descriptive status information; `link-cache/generation.json` remains the authoritative cache-generation record.
 
 ### `latest-snapshot`
 

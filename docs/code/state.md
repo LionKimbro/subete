@@ -65,6 +65,8 @@ authoritative mutation complete
         ↓
 journal committed
         ↓
+cache-current publication attempted
+        ↓
 response delivery attempted
         ↓
 request completed
@@ -389,7 +391,7 @@ Every created or changed entity has its intended resulting revision.
 
 Every deleted entity is absent from all authoritative stores.
 
-Required current derived structures, including the Version 1 link cache, have been reconciled sufficiently for the new generation to be presented.
+Required derived cache-entry changes have been prepared. For the Version 1 link cache, `generation.json` remains at the last committed generation with `state = updating` and a target generation equal to the pending journal sequence.
 
 ## Meaning
 
@@ -435,6 +437,20 @@ A committed transaction remains committed even if:
 * response delivery fails;
 * request archival fails;
 * the process stops immediately afterward.
+
+## Cache-Current Publication
+
+After journal commitment establishes the new database generation, Subete publishes required derived services as current for that generation. For the Version 1 link cache, this replaces the `updating` record with `state = current` and the newly committed generation.
+
+There may be a short post-commit interval in which the database is at generation `N + 1` while the cache remains:
+
+```text
+state = updating
+generation = N
+target-generation = N + 1
+```
+
+This state is not an error and must not be presented as current cache information. If the process stops in this interval, startup recovery completes cache-current publication before announcing ordinary service as ready.
 
 ## Commit Ordering
 
@@ -653,9 +669,10 @@ For each pending journal entry, beginning with the lowest sequence:
 3. inspect every affected authoritative store;
 4. compare current state with before and after states;
 5. apply every remaining transition to after-state;
-6. reconcile required current derived structures;
+6. prepare required derived cache entries and record their pending target generation;
 7. move the journal entry to `committed/`;
-8. advance generation to its sequence.
+8. advance generation to its sequence;
+9. publish required derived services as current for the committed generation.
 
 Normal request service remains unavailable until all recoverable pending transactions are resolved.
 

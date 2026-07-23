@@ -59,12 +59,21 @@ The `relationship` field and any additional link-aspect fields describe the rela
 
 ## Endpoint Validity
 
-Each endpoint must identify an entity that:
+When a link is created or one of its endpoints is changed, each resulting endpoint must identify an entity that:
 
 * already exists in the committed database; or
 * will exist after the same transaction commits.
 
-A transaction that would leave a committed link pointing to a nonexistent endpoint is invalid.
+This is a creation and endpoint-redirection rule. It does not impose permanent referential integrity after the transaction commits.
+
+## Dangling Endpoints
+
+The following rules apply after a link has been created or redirected:
+
+* A later transaction may delete an endpoint entity without changing the link.
+* The link remains authoritative and valid; its endpoint identifier continues to identify the absent entity by stable ID.
+* Cache files may consequently exist for entity IDs that currently have no entity record.
+* Attached-link lookup by a deleted entity ID remains valid and returns the link IDs indexed for that ID.
 
 ---
 
@@ -94,7 +103,7 @@ subete-data/
     incoming/
 ```
 
-Each endpoint entity may have one outgoing cache file and one incoming cache file.
+Each endpoint ID may have one outgoing cache file and one incoming cache file, whether or not a current entity record exists for that ID.
 
 Example:
 
@@ -174,7 +183,9 @@ It must match `identity.json`.
 }
 ```
 
-The committed database generation completely represented by the cache.
+The last committed database generation published by this cache as `"current"`.
+
+When `state` is `"updating"`, this remains the last published generation while `target-generation` identifies prepared cache changes that have not yet been published as current.
 
 ### `updated`
 
@@ -200,6 +211,7 @@ Recommended values are:
 
 ```text
 current
+updating
 rebuilding
 stale
 error
@@ -216,6 +228,18 @@ and:
 ```text
 link-cache generation = database generation
 ```
+
+### `target-generation`
+
+```json
+{
+  "type": "integer",
+  "required": "when state is updating",
+  "minimum": 0
+}
+```
+
+The generation for which cache-entry changes have been prepared but are not yet published as current. It is required when `state` is `"updating"` and omitted when `state` is `"current"`.
 
 ---
 
@@ -434,6 +458,8 @@ Returns link entity IDs whose authoritative link aspect has:
 from = entity
 ```
 
+The requested entity ID need not currently resolve to an entity record.
+
 ## Incoming Links
 
 Returns link entity IDs whose authoritative link aspect has:
@@ -441,6 +467,8 @@ Returns link entity IDs whose authoritative link aspect has:
 ```text
 to = entity
 ```
+
+The requested entity ID need not currently resolve to an entity record.
 
 ## All Attached Links
 
@@ -479,9 +507,10 @@ When a transaction creates a link entity:
 4. the authoritative link entity is created;
 5. the link ID is added to the outgoing entry for `from`;
 6. the link ID is added to the incoming entry for `to`;
-7. affected cache files are written with the transaction generation;
-8. the cache generation is advanced only when all required cache changes are complete;
-9. the journal transaction is committed.
+7. affected cache files are written for the transaction target generation;
+8. `generation.json` remains at the last committed generation with `state` set to `"updating"` and `target-generation` set to the transaction generation;
+9. the journal transaction is committed and the database generation advances;
+10. `generation.json` is published as `"current"` at the new committed generation.
 
 Example:
 
@@ -553,6 +582,8 @@ If the link aspect is removed entirely, the entity ceases to be recognized as a 
 
 If a non-link entity gains a valid link aspect, it is added to both indexes.
 
+The resulting endpoints must satisfy the endpoint-validity rule.
+
 ---
 
 # Link Deletion
@@ -567,7 +598,7 @@ When a link entity is deleted:
 6. empty cache entry files may be deleted;
 7. cache generation is advanced with transaction completion.
 
-Deleting an endpoint entity is invalid while committed link entities would continue to refer to it, unless the same transaction also deletes or changes every affected link so that no dangling endpoint remains.
+Deleting an endpoint entity does not delete, invalidate, or rewrite links that refer to its ID. Their cache memberships remain indexed under the deleted entity ID.
 
 ---
 
@@ -594,15 +625,18 @@ The link cache does not need to become authoritative journal content.
 
 # Transaction Application
 
-The link cache participates in transaction application because Subete must not present a newly committed generation with an older link cache as though it were current.
+The link cache participates in every transaction lifecycle because its published generation must track the committed database generation. Subete must not present a newly committed generation with an older link cache as though it were current.
 
-For each transaction affecting links:
+For each transaction:
 
 1. apply the authoritative entity after-states;
 2. apply all required link-cache entry changes;
 3. verify affected cache entries;
-4. write the cache generation record for the new generation;
-5. finalize journal commitment.
+4. write `generation.json` with `state` set to `"updating"`, its `generation` left at the last committed generation, and `target-generation` set to the pending journal sequence;
+5. finalize journal commitment and advance the database generation;
+6. publish `generation.json` with `state` set to `"current"` and `generation` equal to the newly committed database generation.
+
+When a transaction does not affect a link entity or its link aspect, Step 2 has no cache-entry changes. The two-phase global generation publication still occurs.
 
 The exact physical write order may vary, but Subete must not publish:
 
@@ -610,7 +644,7 @@ The exact physical write order may vary, but Subete must not publish:
 link-cache state = current
 ```
 
-for the new generation until all cache changes for that generation are complete.
+for the new generation until both the journal is committed and all cache changes for that generation are complete.
 
 ---
 
@@ -632,7 +666,7 @@ Adding an already-present link ID is a no-op.
 
 Removing an already-absent link ID is a no-op.
 
-After the authoritative transaction after-state and all required cache entries are correct, recovery writes the cache generation and completes journal commitment.
+After the authoritative transaction after-state and all required cache entries are correct, recovery writes or verifies an `"updating"` cache record for the pending target generation, completes journal commitment, and then publishes the cache as `"current"` at the committed generation.
 
 ---
 
@@ -659,9 +693,21 @@ the cache is stale.
 
 Subete must not use it as a complete answer for current links.
 
+An updating cache may legitimately be behind the committed database for a short post-commit interval:
+
+```json
+{
+  "state": "updating",
+  "generation": 42,
+  "target-generation": 43
+}
+```
+
+while the committed database generation is `43`. This state is honest but not current: ordinary link lookup must wait, fail explicitly, or use an explicitly defined authoritative fallback. Recovery or normal post-commit work publishes `"current"` only after cache-current publication completes.
+
 ## Cache Ahead of the Database
 
-If:
+If the published `generation` field is greater than the committed database generation:
 
 ```text
 cache generation > database generation
@@ -678,6 +724,8 @@ It must not trust the cache as current.
 Each entry file should record the generation at which it was last written.
 
 An entry generation older than the global cache generation may still be valid if no attached links changed since that earlier generation.
+
+While the global cache is `"updating"`, an entry generation may equal `target-generation` and therefore be newer than the published global `generation`. That is prepared cache content, not current cache content, and must not be used for ordinary cache lookup until global publication succeeds.
 
 The global `generation.json` is the declaration that the complete cache represents the current world.
 
@@ -757,7 +805,7 @@ A maintenance or recovery state may remain available while rebuilding.
 
 # Cache Stale
 
-If the cache generation is older than the committed database generation:
+If the cache has `state = "stale"`, or if its published `generation` is older than the committed database generation without the permitted `"updating"` transition:
 
 * Subete must not return cache results as complete current answers;
 * status reports the cache as `stale`;
@@ -830,6 +878,19 @@ Other examples include:
     "state": "rebuilding",
     "generation": 41,
     "target-generation": 42
+  }
+}
+```
+
+An update in progress may be reported as:
+
+```json
+{
+  "link-cache": {
+    "state": "updating",
+    "generation": 42,
+    "target-generation": 43,
+    "database-generation": 43
   }
 }
 ```
@@ -936,11 +997,14 @@ link-cache/
 * Link entities in authoritative storage are the sole authority for relationships.
 * An entity is indexed as a link only when it contains a valid link aspect.
 * Every link is indexed by both its `from` and `to` endpoints.
+* Cache entries may be keyed by endpoint IDs whose entity records are currently absent.
+* Endpoint existence is validated when a link is created or redirected, not when an endpoint entity is later deleted.
 * Cache lookups return link entity IDs, not authoritative relationship contents.
 * The cache is derived and completely rebuildable.
 * Cache files must not be edited directly by callers.
 * A cache is current only when its database identity and generation match the committed database.
-* A stale, absent, rebuilding, or malformed cache must not be presented as complete current link information.
+* A stale, updating, absent, rebuilding, or malformed cache must not be presented as complete current link information.
+* Cache-entry changes may be prepared for a target generation before journal commitment, but only `generation.json` with `state = current` publishes a cache as current.
 * Transaction application and recovery keep the cache synchronized with committed link changes.
 * Recovery may repeat cache mutations idempotently.
 * Rebuilding scans authoritative link entities and constructs a complete replacement cache.

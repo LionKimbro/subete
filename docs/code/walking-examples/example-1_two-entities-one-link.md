@@ -502,7 +502,7 @@ Subete writes or replaces the affected cache entry files:
 ```text
 link-cache/outgoing/11111111-1111-4111-8111-111111111111.json
 link-cache/incoming/22222222-2222-4222-8222-222222222222.json
-````
+```
 
 After all affected cache entries are complete, Subete writes:
 
@@ -616,7 +616,7 @@ The published committed generation remains `41`.
 
 ---
 
-# 8. Link Cache After Application
+# 8. Link Cache Preparation
 
 The authoritative link entity causes one outgoing cache membership and one incoming cache membership.
 
@@ -635,7 +635,7 @@ link-cache/
 
   incoming/
     22222222-2222-4222-8222-222222222222.json
-````
+```
 
 ## Alice Outgoing Entry
 
@@ -713,18 +713,20 @@ link-cache/generation.json
 {
   "link-cache-format-version": 1,
   "database-id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  "generation": 42,
+  "generation": 41,
   "updated": "2026-07-23T23:40:01Z",
-  "state": "current"
+  "state": "updating",
+  "target-generation": 42
 }
 ```
 
-This file declares that the complete active link cache represents committed generation `42`.
+This file declares that cache-entry changes have been prepared for target generation `42`, while published cache generation remains `41`.
 
 The cache must not be treated as current until:
 
 * both affected entry files are complete;
-* `generation.json` reports `state` as `current`;
+* the journal is committed at generation `42`;
+* `generation.json` reports `state` as `current` at generation `42`;
 * the cache generation equals the committed database generation.
 
 At this moment, authoritative mutation and cache mutation are complete, but the journal entry has not yet moved to `committed/`.
@@ -758,7 +760,7 @@ Before commitment, Subete confirms that:
 - all three authoritative entity after-states are established;
 - the outgoing cache entry contains the link ID;
 - the incoming cache entry contains the link ID;
-- `link-cache/generation.json` reports generation `42` and state `current`.
+- `link-cache/generation.json` reports generation `41`, state `updating`, and target generation `42`.
 
 The journal may then move to `committed/`.
 
@@ -767,6 +769,22 @@ The database generation advances:
 ```text
 41 → 42
 ```
+
+## Cache-Current Publication
+
+After journal commitment, Subete publishes the prepared cache as current:
+
+```json
+{
+  "link-cache-format-version": 1,
+  "database-id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "generation": 42,
+  "updated": "2026-07-23T23:40:02Z",
+  "state": "current"
+}
+```
+
+Only now does the global cache record declare generation `42` current.
 
 ---
 
@@ -1128,6 +1146,7 @@ D:/subete-example/replies/
 | Link-cache entries written               |                   41 |
 | Link-cache generation prepared for 42    |                   41 |
 | Journal moved to `committed/`            |                   42 |
+| Link-cache published current for 42      |                   42 |
 | Transaction response delivered           |                   42 |
 | Batched read completed                   |                   42 |
 | Combined search completed                |                   42 |
@@ -1151,5 +1170,5 @@ D:/subete-example/replies/
 * Link creation updates both the outgoing index of the `from` endpoint and the incoming index of the `to` endpoint.
 * Link-cache entry files contain sorted link entity IDs only.
 * `link-cache/generation.json` declares when the complete cache represents the committed world.
-* The link cache is updated before journal commitment so Subete does not present a new committed generation with a stale cache.
+* Link-cache entries are prepared before journal commitment, while cache-current publication occurs afterward at the committed generation.
 * The authoritative link entity, not the cache, remains the sole authority for the relationship.

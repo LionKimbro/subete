@@ -687,9 +687,9 @@ Recovery:
 2. performs no entity revision changes;
 3. derives cache consequences from journaled before and after states;
 4. completes or rebuilds affected cache entries;
-5. records cache generation `N + 1`;
-6. commits the journal;
-7. advances database generation.
+5. prepares an updating cache record with published generation `N` and target generation `N + 1`;
+6. commits the journal and advances database generation;
+7. publishes the cache as current at generation `N + 1`.
 
 The cache must not be treated as current for generation `N + 1` before reconciliation completes.
 
@@ -741,7 +741,7 @@ remove absent membership:
     no-op
 ```
 
-After all entries are correct, recovery writes the global cache generation for `N + 1` and continues to journal commitment.
+After all entries are correct, recovery writes or verifies an updating cache record with published generation `N` and target generation `N + 1`, commits the journal, and then publishes the cache as current at `N + 1`.
 
 ---
 
@@ -753,7 +753,7 @@ Crash after:
 
 * every authoritative entity matches after-state;
 * all required cache entries are correct;
-* cache generation is prepared for `N + 1`;
+* `generation.json` is prepared with `state = updating`, published generation `N`, and target generation `N + 1`;
 
 but before journal commitment.
 
@@ -767,7 +767,9 @@ all entities:
     after-state
 
 link cache:
-    complete for target generation N+1
+    state updating
+    published generation N
+    target generation N+1
 
 committed journal N+1:
     absent
@@ -789,8 +791,9 @@ It then:
 
 1. commits the pending journal;
 2. advances recognized database generation to `N + 1`;
-3. delivers the response;
-4. archives the request.
+3. publishes the cache as current at `N + 1`;
+4. delivers the response;
+5. archives the request.
 
 This proves that recovery can finalize an already-applied transaction without applying it twice.
 
@@ -874,11 +877,11 @@ Recovery must never apply the transaction as a new sequence.
 
 ---
 
-# Boundary 13 — After Journal Commitment
+# Boundary 13 — After Journal Commitment, Before Cache-Current Publication
 
 ## Injection Point
 
-Crash after the journal record is committed and generation has logically advanced, but before response construction or delivery.
+Crash after the journal record is committed and generation has logically advanced, but before the cache is published as current and before response construction or delivery.
 
 Conceptually:
 
@@ -888,7 +891,7 @@ generation N+1
         ↓
 CRASH
         ↓
-response not delivered
+cache still updating; response not delivered
 ```
 
 ## Expected State Before Restart
@@ -898,7 +901,9 @@ affected entities:
     all after-state
 
 link cache:
-    current at N+1
+    state updating
+    generation N
+    target-generation N+1
 
 committed journal:
     sequence N+1 present
@@ -923,9 +928,10 @@ On restart:
 1. Subete finds the claimed request.
 2. It associates the request ID with committed journal sequence `N + 1`.
 3. It does not execute, plan, or journal the transaction again.
-4. It reconstructs the committed success response.
-5. It attempts response delivery.
-6. It archives the request as completed if delivery policy permits.
+4. It publishes the cache as current at generation `N + 1`.
+5. It reconstructs the committed success response.
+6. It attempts response delivery.
+7. It archives the request as completed if delivery policy permits.
 
 The transaction remains committed regardless of response delivery outcome.
 
@@ -1472,9 +1478,9 @@ The original transaction outcome remains intact.
 | Between entity writes             | Pending                     | Mixed before and after       |                          N | Leave after-states; apply remaining before-states      |
 | After all entity writes           | Pending                     | All after                    |                          N | Reconcile cache and commit                             |
 | During cache update               | Pending                     | All after                    |                          N | Complete cache idempotently and commit                 |
-| Before journal commitment         | Pending                     | All after; cache ready       |                          N | Verify and commit                                      |
+| Before journal commitment         | Pending                     | All after; cache updating    |                          N | Commit, then publish cache current                     |
 | During journal commitment         | Pending, committed, or both | All after                    | N or uncertain publication | Normalize one committed journal; recognize N+1         |
-| After commitment, before response | Committed                   | All after                    |                        N+1 | Reconstruct response; no re-execution                  |
+| After commitment, before cache publication | Committed            | All after                    |                        N+1 | Publish cache current; no re-execution                 |
 | During response delivery          | Committed                   | All after                    |                        N+1 | Redeliver same logical response                        |
 | After response, before archival   | Committed                   | All after                    |                        N+1 | Archive claimed request                                |
 | During request archival           | Committed                   | All after                    |                        N+1 | Normalize one completed record                         |
@@ -1537,6 +1543,9 @@ cache.after_outgoing
 cache.after_incoming
 cache.before_generation
 cache.after_generation
+cache.before_current_publish
+cache.during_current_publish
+cache.after_current_publish
 
 commit.before_move
 commit.during_move
@@ -1621,7 +1630,8 @@ No test may pass with:
 * Matching neither produces recovery error.
 * Entity revisions advance at most once.
 * Cache updates are derived and repeatable.
-* Journal commitment occurs only after complete authoritative and required derived state.
+* Journal commitment occurs only after complete authoritative state and required derived cache-entry preparation.
+* A cache is published as current only after the corresponding journal commitment establishes the same database generation.
 * Generation advances at most once.
 * Response delivery failure never reverses commitment.
 * Request archival failure never causes re-execution.

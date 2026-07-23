@@ -260,7 +260,7 @@ An entity may be created with no initial aspects.
 * The operation fails if the entity already exists.
 * A successfully created entity begins at revision `1`.
 * Creation does not implicitly create any related entities.
-* Creating a link entity does not require its endpoint entities to exist unless a separate validation policy requires that.
+* When a created entity contains the conventional M1 link aspect, its `from` and `to` endpoint entities must exist after the transaction commits. Endpoint entities may be created by other `create-entity` operations in the same transaction.
 
 ---
 
@@ -349,6 +349,7 @@ The value is normally a JSON object, but the accepted value domain follows the g
 * `set-aspect` is not a recursive merge.
 * `set-aspect` is not a JSON Patch operation.
 * Aspect-specific validation may reject an invalid value.
+* When `aspect` is the conventional M1 link aspect, the replacement value's `from` and `to` endpoint entities must exist after the transaction commits.
 * If the transaction changes the entity, its revision advances by one when the transaction commits.
 * No other operation in the transaction may target the same aspect on this entity.
 
