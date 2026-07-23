@@ -431,7 +431,7 @@ Subete validates the request and computes the complete before-state and after-st
 
 Because the link endpoints do not change, its outgoing and incoming cache memberships do not change.
 
-The cache must still be advanced to generation `43` before the transaction is committed.
+The cache must still have its global `updating` record and prepared target generation `43` before the transaction is committed. It is not current at `43` yet.
 
 ---
 
@@ -1062,7 +1062,19 @@ journal/committed/00000000000000000043__77777777-7777-4777-8777-777777777777.jso
 
 The journal contents do not change.
 
-The recognized database generation advances:
+Recovery then publishes root `generation.json`:
+
+```json
+{
+  "generation-format-version": 1,
+  "database-id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "generation": 43,
+  "journal-sequence": 43,
+  "updated": "2026-07-24T00:12:03Z"
+}
+```
+
+The recognized database generation is now:
 
 ```text
 42 → 43
@@ -1268,6 +1280,7 @@ Subete publishes `ready` only after the pending transaction has been fully appli
 
 ```text
 subete-data/
+  generation.json
   entities/
     11111111-1111-4111-8111-111111111111.json
     22222222-2222-4222-8222-222222222222.json

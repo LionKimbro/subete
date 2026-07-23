@@ -124,4 +124,4 @@ The complete definitions of success, failure, not-found results, generations, re
 * One file contains one response.
 * A response file is not authoritative entity state.
 * Failure to write a response does not reverse a completed request or committed transaction.
-* A retried request should receive the previously recorded logical response rather than cause the operation to execute again.
+* A retried transaction request should receive the previously recorded logical response rather than cause the transaction to execute again. Read and search requests may be executed again because they do not mutate authoritative state.

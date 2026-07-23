@@ -153,7 +153,7 @@ Continued changes in file size or modification time may be treated as evidence t
 
 If a file remains unchanged and unreadable beyond a configured quiet period, Subete may treat it as stale or abandoned.
 
-The quiet period and stale-file handling policy are operational configuration.
+The quiet period and stale-file handling policy are operational configuration. `formats/configuration.md` defines the Version 1 action vocabulary and its non-destructive default.
 
 A stale file may, according to configuration:
 
@@ -239,7 +239,7 @@ The sender is responsible for choosing a reply path that is appropriate for the 
 
 A sender may use a unique request identifier, UUID, or another naming convention when constructing the reply path.
 
-The reply destination must satisfy Subete’s configured destination policy.
+The reply destination must satisfy Subete’s configured destination policy, defined by `formats/configuration.md`.
 
 In particular, it must not point into Subete’s authoritative internal storage unless explicitly allowed by configuration.
 

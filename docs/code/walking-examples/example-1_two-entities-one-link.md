@@ -72,6 +72,7 @@ The relevant filesystem is:
 subete-data/
   identity.json
   configuration.json
+  generation.json
 
   inbox/
   inbox-processing/
@@ -495,7 +496,7 @@ The transaction also has the following link-cache consequences:
 
 - add link `33333333-3333-4333-8333-333333333333` to the outgoing entry for Alice;
 - add link `33333333-3333-4333-8333-333333333333` to the incoming entry for Moon Garden;
-- advance the complete link cache to generation `42`.
+- prepare affected link-cache entries for target generation `42`.
 
 Subete writes or replaces the affected cache entry files:
 
@@ -510,7 +511,7 @@ After all affected cache entries are complete, Subete writes:
 link-cache/generation.json
 ```
 
-declaring that the complete cache represents generation `42`.
+with `state: "updating"`, published generation `41`, and target generation `42`. This prepares cache content but does not declare the cache current.
 
 Until the authoritative entities and all required link-cache updates are complete, ordinary reads, searches, and attached-link lookups do not observe generation `42`.
 
@@ -764,7 +765,19 @@ Before commitment, Subete confirms that:
 
 The journal may then move to `committed/`.
 
-The database generation advances:
+Subete then publishes root `generation.json`:
+
+```json
+{
+  "generation-format-version": 1,
+  "database-id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "generation": 42,
+  "journal-sequence": 42,
+  "updated": "2026-07-23T23:40:02Z"
+}
+```
+
+The database generation is now:
 
 ```text
 41 → 42
@@ -1088,6 +1101,8 @@ The relevant files now include:
 
 ```text
 subete-data/
+  generation.json
+
   entities/
     11111111-1111-4111-8111-111111111111.json
     22222222-2222-4222-8222-222222222222.json

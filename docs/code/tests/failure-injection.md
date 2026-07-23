@@ -1496,9 +1496,9 @@ The rerun must report the same observed generation as the interrupted execution.
 | Between entity writes             | Pending                     | Mixed before and after       |                          N | Leave after-states; apply remaining before-states      |
 | After all entity writes           | Pending                     | All after                    |                          N | Reconcile cache and commit                             |
 | During cache update               | Pending                     | All after                    |                          N | Complete cache idempotently and commit                 |
-| Before journal commitment         | Pending                     | All after; cache updating    |                          N | Commit, then publish cache current                     |
-| During journal commitment         | Pending, committed, or both | All after                    | N or uncertain publication | Normalize one committed journal; recognize N+1         |
-| After commitment, before cache publication | Committed            | All after                    |                        N+1 | Publish cache current; no re-execution                 |
+| Before journal commitment         | Pending                     | All after; cache updating    |                          N | Commit, publish root generation, then publish cache current |
+| During journal commitment         | Pending, committed, or both | All after                    | N or uncertain publication | Normalize one committed journal; publish root generation if needed |
+| After commitment, before cache publication | Committed            | All after                    |                        N+1 | Publish cache current; no transaction re-execution     |
 | During response delivery          | Committed                   | All after                    |                        N+1 | Redeliver same logical response                        |
 | After response, before archival   | Committed                   | All after                    |                        N+1 | Archive claimed request                                |
 | During request archival           | Committed                   | All after                    |                        N+1 | Normalize one completed record                         |
@@ -1652,6 +1652,6 @@ No test may pass with:
 * A cache is published as current only after the corresponding journal commitment establishes the same database generation.
 * Generation advances at most once.
 * Response delivery failure never reverses commitment.
-* Request archival failure never causes re-execution.
-* Duplicate requests return or reproduce one logical outcome.
+* Transaction request archival failure never causes transaction re-execution. An identical completed read or search may execute again as a new non-mutating observation.
+* Duplicate transaction requests return or reproduce one logical outcome; identical completed reads and searches may execute again as new non-mutating observations.
 * Startup does not announce `ready` while a recoverable pending transaction remains unresolved.

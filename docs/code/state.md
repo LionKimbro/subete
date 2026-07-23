@@ -161,7 +161,7 @@ Subete reads the request identity and determines whether:
 
 * the request has no journal entry and should resume validation;
 * a pending journal entry already exists and transaction recovery governs;
-* a committed journal entry already exists and the request must not execute again;
+* a committed journal entry already exists and the transaction request must not execute again;
 * a prior completed or failed outcome already exists.
 
 ---
@@ -392,7 +392,7 @@ Every created or changed entity has its intended resulting revision.
 
 Every deleted entity is absent from all authoritative stores.
 
-Required derived cache-entry changes have been prepared. For the Version 1 link cache, `generation.json` remains at the last committed generation with `state = updating` and a target generation equal to the pending journal sequence.
+Required derived cache-entry changes have been prepared. For the Version 1 link cache, `link-cache/generation.json` remains at the last committed generation with `state = updating` and a target generation equal to the pending journal sequence.
 
 ## Meaning
 
@@ -531,7 +531,7 @@ If Subete stops after writing the response but before archiving the request, sta
 
 The recipient must therefore tolerate replacement or repeated delivery of the same logical response.
 
-The request must not be executed again.
+A transaction request must not be executed again. An unfinished read or search may be rerun under the sequential-recovery rule, and a later completed read or search delivery may execute again as a new non-mutating observation.
 
 ---
 
@@ -561,9 +561,9 @@ Moving the request to `completed/` does not alter entity state or advance the ge
 
 ## Startup Behavior
 
-A request already present in `completed/` must not execute again.
+A completed transaction request must not execute again. A completed read or search request may execute again when its request-family protocol permits a repeated non-mutating observation.
 
-A repeated inbox delivery with the same request ID is handled as a duplicate under its request-family protocol. Only transaction commitment requires a durable outcome that can be reconstructed after archival; Version 1 does not require a completed read or search record to preserve its prior result for replay.
+A repeated inbox delivery with the same request ID is handled under its request-family protocol. Only transaction commitment requires a durable outcome that can be reconstructed after archival; an identical completed read or search may execute again as a new non-mutating observation of the current committed generation.
 
 ---
 
@@ -636,7 +636,7 @@ They do not:
 
 Subete processes only one request at a time. While a read or search is executing or its reply is being delivered, no other request may mutate the database. Therefore, if the process stops before the request is completed, recovery discards any incomplete temporary response file, retains the claimed request, and reruns the read or search against the unchanged committed generation. It then publishes the completed response according to `filetalk-protocol.md`, using atomic replacement when it is available and the protocol's tolerant direct-write delivery otherwise, and archives the request normally.
 
-This recovery rule does not require a durable read or search outcome record. It applies only to an unfinished claimed request; a request already archived as completed or failed is handled as a duplicate by its request-family protocol.
+This recovery rule does not require a durable read or search outcome record. It applies only to an unfinished claimed request; an identical request already archived as completed may execute again as a new non-mutating observation under its request-family protocol.
 
 ---
 

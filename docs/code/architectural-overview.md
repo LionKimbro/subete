@@ -42,9 +42,9 @@ Subete does not interpret multiple layers of competing M1 documents. It does not
 
 The authoritative entity files are the database.
 
-Other structures—search indexes, status displays, snapshots, and caches introduced in later versions—are derived from or describe that authoritative state. They must never become competing sources of truth.
+Other structures—status displays, snapshots, the Version 1 link cache, and search indexes introduced in later versions—are derived from or describe that authoritative state. They must never become competing sources of truth.
 
-In Version 1, entity files are stored directly under `entities/`, without sharding or caching. Simplicity, inspectability, and correctness take priority over scale optimizations.
+In Version 1, entity files are stored directly under `entities/`, without sharding. The Version 1 link cache is the sole cache: it is a required, rebuildable derived index for attached-link lookup, not a competing source of truth. Simplicity, inspectability, and correctness take priority over scale optimizations.
 
 ## The Subete Process
 
@@ -186,7 +186,7 @@ Generations provide a shared consistency language across Subete:
 * status files report the current generation;
 * snapshots identify the generation captured;
 * checkpoints identify recovery boundaries;
-* future indexes report the generation through which they are current.
+* the Version 1 link cache and future indexes report the generation through which they are current.
 
 A generation identifies an authoritative state of the Subete world.
 
@@ -280,11 +280,11 @@ It includes:
 * snapshots;
 * checkpoints;
 * public status reporting;
+* the rebuildable link cache for attached-link lookup;
 * crash-boundary testing.
 
 It deliberately postpones:
 
-* caching;
 * entity-directory sharding;
 * persistent search indexes;
 * in-memory indexes;

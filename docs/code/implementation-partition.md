@@ -273,9 +273,9 @@ It:
 8. publishes heartbeat and metrics;
 9. performs orderly shutdown.
 
-The initial implementation may process requests sequentially.
+Version 1 must process requests sequentially. One claimed request remains active through validation, execution, response delivery, and terminal archival before the next request begins.
 
-Concurrency is not required for Version 1.
+Concurrency is out of scope for Version 1. See [ADR 002](../architecture/002__sequential-request-processing.md).
 
 A sequential service provides:
 
@@ -405,17 +405,18 @@ It examines appropriate records such as:
 
 It owns the rule:
 
-> One request ID produces at most one logical execution.
+> One transaction request ID produces at most one logical execution. Identical completed read and search requests may execute again because they are non-mutating.
 
 It determines whether a repeated request should:
 
 * resume incomplete pre-journal processing;
 * associate with a pending transaction;
-* reproduce a committed response;
-* reproduce a previous failure;
+* reproduce a committed transaction response;
+* reproduce a previous transaction or validation failure when required;
+* allow an identical completed read or search to execute again;
 * be rejected because the same request ID was reused with different content.
 
-For an unfinished claimed read or search, it delegates to request recovery, which reruns the retained request at the unchanged generation under Subete's single-request execution model. Version 1 does not require completed or failed read/search records to preserve a replayable outcome.
+For an unfinished claimed read or search, it delegates to request recovery, which reruns the retained request at the unchanged generation under Subete's single-request execution model. Version 1 does not require completed or failed read/search records to preserve a replayable outcome; an identical completed read or search may execute again.
 
 It does not invent a new outcome for an already completed transaction.
 
@@ -796,7 +797,7 @@ inbox-processing/completed/
 inbox-processing/failed/
 ```
 
-Completed records preserve enough information to recognize duplicate requests and reproduce outcomes.
+Completed records preserve enough information to recognize duplicate requests. Committed transactions additionally preserve their reconstructible outcomes through journal history; completed reads and searches need not preserve result bodies.
 
 Failed records preserve:
 

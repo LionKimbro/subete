@@ -508,7 +508,7 @@ When a transaction creates a link entity:
 5. the link ID is added to the outgoing entry for `from`;
 6. the link ID is added to the incoming entry for `to`;
 7. affected cache files are written for the transaction target generation;
-8. `generation.json` remains at the last committed generation with `state` set to `"updating"` and `target-generation` set to the transaction generation;
+8. `link-cache/generation.json` remains at the last committed generation with `state` set to `"updating"` and `target-generation` set to the transaction generation;
 9. the journal entry moves to `journal/committed/` and root `generation.json` publishes the new database generation;
 10. `link-cache/generation.json` is published as `"current"` at that committed generation.
 
@@ -632,19 +632,19 @@ For each transaction:
 1. apply the authoritative entity after-states;
 2. apply all required link-cache entry changes;
 3. verify affected cache entries;
-4. write `generation.json` with `state` set to `"updating"`, its `generation` left at the last committed generation, and `target-generation` set to the pending journal sequence;
+4. write `link-cache/generation.json` with `state` set to `"updating"`, its `generation` left at the last committed generation, and `target-generation` set to the pending journal sequence;
 5. move the journal entry to `committed/` and publish root `generation.json` at the new database generation;
 6. publish `link-cache/generation.json` with `state` set to `"current"` and `generation` equal to the newly committed database generation.
 
 When a transaction does not affect a link entity or its link aspect, Step 2 has no cache-entry changes. The two-phase global generation publication still occurs.
 
-The exact physical write order may vary, but Subete must not publish:
+The order of individual cache-entry writes may vary, but global publication has this required order: prepared entries and `state = updating`; journal movement to `committed/`; root `generation.json` publication; then cache-current publication. Subete must not publish:
 
 ```text
 link-cache state = current
 ```
 
-for the new generation until both the journal is committed and all cache changes for that generation are complete.
+for the new generation until the journal is committed, root `generation.json` publishes that generation, and all cache changes for that generation are complete.
 
 ---
 

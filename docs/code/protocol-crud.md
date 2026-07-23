@@ -961,24 +961,23 @@ CRUD and read requests use `request-id` to make repeated FileTalk delivery safe.
 
 When Subete receives a request whose `request-id` has already completed:
 
-* it must not execute the logical request again;
 * a committed transaction must retain its original journal sequence and generation;
 * a committed transaction should reproduce or redeliver its recorded outcome;
-* Version 1 does not require a completed read request to retain a replayable result;
+* a repeated read request may execute again against the generation current when it is processed and returns that generation in its reply;
 * an unfinished claimed read is rerun during recovery at its unchanged observed generation, as defined in `state.md`;
-* a completed read duplicate must not be silently treated as a new logical request against a newer generation.
+* a repeated transaction request must not execute again.
 
 For transactions, committed journal history is sufficient to establish that the transaction has already been applied.
 
 ## Same Request ID, Different Request
 
-If the same `request-id` is presented with materially different request content, Subete must reject it with `request-id-conflict`.
+If the same `request-id` is presented with materially different transaction request content, Subete must reject it with `request-id-conflict`. Repeated reads are non-mutating and may execute again only when their request contents, including reply destination, are identical.
 
 The reply destination is part of the submitted request content. In the initial CRUD/read protocol, changing only the reply destination under the same `request-id` is still a conflict. A future protocol may define a separate reply-redelivery request.
 
 ## Duplicate While Processing
 
-If a duplicate arrives while the original request is claimed or still being processed, Subete must not run both independently.
+If a duplicate arrives while the original request is claimed or still being processed, Subete must not run both independently. Once the original non-mutating read reaches a terminal record, a later identical delivery may execute as a new read.
 
 The duplicate may:
 
@@ -987,7 +986,7 @@ The duplicate may:
 * be associated with the original execution;
 * be rejected as already in progress.
 
-The exact operational policy may be defined separately, but at most one logical execution may occur.
+The exact operational policy may be defined separately, but at most one transaction execution or concurrently active read execution may occur for the request ID.
 
 ---
 
