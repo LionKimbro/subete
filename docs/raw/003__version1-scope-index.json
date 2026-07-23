@@ -1,0 +1,134 @@
+{
+  "scope-index-format-version": 1,
+  "designation": "Subete Version 1 Specification Scope",
+  "specification-commit": "e211f8b11dab1f087a30261ba2c6ec89f4fd6107",
+  "governing-specification-files": [
+    {
+      "path": "docs/architecture/001__dangling-links.md",
+      "role": "Accepted architectural decision defining Version 1 dangling-link semantics."
+    },
+    {
+      "path": "docs/architecture/002__sequential-request-processing.md",
+      "role": "Accepted architectural decision requiring sequential Version 1 request processing."
+    },
+    {
+      "path": "docs/code/architectural-overview.md",
+      "role": "Version 1 purpose, service model, major capabilities, and scope."
+    },
+    {
+      "path": "docs/code/filesystem-layout.md",
+      "role": "Authoritative and derived filesystem locations, ownership, and layout roles."
+    },
+    {
+      "path": "docs/code/filetalk-protocol.md",
+      "role": "Shared FileTalk message delivery, incomplete-file handling, reply delivery, and delivery failures."
+    },
+    {
+      "path": "docs/code/implementation-partition.md",
+      "role": "Implementation territories, ownership boundaries, and dependency direction."
+    },
+    {
+      "path": "docs/code/invariants.md",
+      "role": "Non-negotiable database, transaction, generation, and recovery invariants."
+    },
+    {
+      "path": "docs/code/link-cache.md",
+      "role": "Version 1 derived link-cache format, publication, lookup, rebuild, and recovery behavior."
+    },
+    {
+      "path": "docs/code/protocol-crud.md",
+      "role": "Transaction and read request/reply semantics, revisions, validation, and duplicate behavior."
+    },
+    {
+      "path": "docs/code/protocol-search.md",
+      "role": "Search request/reply semantics, predicates, validation, and duplicate behavior."
+    },
+    {
+      "path": "docs/code/snapshot-checkpoint-lifecycle.md",
+      "role": "Snapshot, checkpoint, journal retention, restoration, and replay lifecycle."
+    },
+    {
+      "path": "docs/code/state.md",
+      "role": "Request, transaction, commitment, response, and startup-recovery state machine."
+    },
+    {
+      "path": "docs/code/formats/checkpoint.md",
+      "role": "Checkpoint record format and recovery-boundary rules."
+    },
+    {
+      "path": "docs/code/formats/configuration.md",
+      "role": "Operational configuration format, including FileTalk stale-file and reply-path policy."
+    },
+    {
+      "path": "docs/code/formats/entity.md",
+      "role": "Version 1 authoritative entity-file naming and content format."
+    },
+    {
+      "path": "docs/code/formats/generation.md",
+      "role": "Authoritative root generation record, publication ordering, and recovery combinations."
+    },
+    {
+      "path": "docs/code/formats/heartbeat.md",
+      "role": "Derived heartbeat status-file format."
+    },
+    {
+      "path": "docs/code/formats/identity.md",
+      "role": "Stable database identity-file format."
+    },
+    {
+      "path": "docs/code/formats/journal-entry.md",
+      "role": "Write-ahead journal-entry format, placement, commitment, and immutability rules."
+    },
+    {
+      "path": "docs/code/formats/metrics.md",
+      "role": "Derived metrics-file format."
+    },
+    {
+      "path": "docs/code/formats/read-request.md",
+      "role": "Compact on-disk read-request format reference."
+    },
+    {
+      "path": "docs/code/formats/response.md",
+      "role": "On-disk response-file conventions and representative reply shapes."
+    },
+    {
+      "path": "docs/code/formats/search-request.md",
+      "role": "Compact on-disk search-request format reference."
+    },
+    {
+      "path": "docs/code/formats/snapshot-manifest.md",
+      "role": "Snapshot manifest format, validation, and restoration rules."
+    },
+    {
+      "path": "docs/code/formats/status.md",
+      "role": "Derived public status-file format."
+    },
+    {
+      "path": "docs/code/formats/transaction-request.md",
+      "role": "Compact on-disk transaction-request format reference."
+    },
+    {
+      "path": "docs/code/tests/failure-injection.md",
+      "role": "Required Version 1 crash-boundary and recovery test specification."
+    }
+  ],
+  "explicitly-excluded-non-governing-files": [
+    {
+      "path": "docs/code/walking-examples/example-1_two-entities-one-link.md",
+      "reason": "Illustrative walking example; it must conform to governing specifications but does not establish protocol requirements."
+    },
+    {
+      "path": "docs/code/walking-examples/example-2_crash-during-multi-entry-transaction.md",
+      "reason": "Illustrative recovery example; it must conform to governing specifications but does not establish protocol requirements."
+    },
+    {
+      "path": "docs/raw/001__development-process.md",
+      "reason": "Historical development-process source material, not a Version 1 governing specification."
+    },
+    {
+      "path": "docs/raw/002__subete-no-big-picture-vision.md",
+      "reason": "Historical exploratory vision material, not a Version 1 governing specification."
+    }
+  ],
+  "scope-rule": "The governing files above define Version 1 requirements. When an illustrative or historical file conflicts with a governing file, the governing file controls."
+}
