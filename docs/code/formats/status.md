@@ -112,7 +112,7 @@ Additional states may be introduced when needed.
 }
 ```
 
-The latest committed database generation currently recognized by Subete.
+The latest committed database generation currently recognized by Subete. This is descriptive only; root `generation.json` is the authoritative generation record.
 
 This value must not advance until the corresponding transaction has fully committed.
 

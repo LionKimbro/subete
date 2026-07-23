@@ -65,6 +65,8 @@ authoritative mutation complete
         ↓
 journal committed
         ↓
+generation publication attempted
+        ↓
 cache-current publication attempted
         ↓
 response delivery attempted
@@ -219,7 +221,6 @@ Planning includes:
 * constructing the complete before-state of each affected entity;
 * computing the complete intended after-state;
 * assigning resulting entity revisions;
-*
 * determining required changes to authoritative storage mechanisms;
 * determining required changes to the link cache and other current derived services;
 * constructing the future transaction response.
@@ -344,7 +345,7 @@ Subete applies the journaled after-state across every affected authoritative sto
 This may include:
 
 * creating, replacing, or deleting entity files;
-* updating authoritative SQLite-backed aspects;
+* updating authoritative SQLite-backed aspects in a future hybrid-storage extension;
 * changing other authoritative aspect stores;
 * updating entity revision metadata;
 * reconciling the Version 1 link cache.
@@ -421,11 +422,11 @@ to:
 journal/committed/
 ```
 
-The database generation becomes the journal sequence of that transaction.
+After the move, Subete publishes `generation.json` with the journal sequence as both `generation` and `journal-sequence`. The database generation becomes that sequence only when this authoritative generation record is published.
 
 ## Meaning
 
-The transaction is committed.
+The journal has committed the transaction's after-state. `generation.json` publication completes the durable publication of the resulting current generation.
 
 Its complete intended after-state is the current authoritative world.
 
@@ -437,6 +438,12 @@ A committed transaction remains committed even if:
 * response delivery fails;
 * request archival fails;
 * the process stops immediately afterward.
+
+## Generation Publication
+
+The journal move and replacement of `generation.json` cannot be one filesystem-atomic operation. A process may therefore stop after the entry is in `journal/committed/` while `generation.json` still names the preceding generation.
+
+On startup, Subete validates that committed entry and the authoritative after-state, then publishes the missing generation record. It must not execute or plan the transaction again. The exact accepted and suspicious combinations are defined in `formats/generation.md`.
 
 ## Cache-Current Publication
 
@@ -540,8 +547,9 @@ The completed record supports:
 
 * auditing;
 * duplicate-request recognition;
-* reply reconstruction;
 * operational inspection.
+
+For transactions, the committed journal supplies the durable logical outcome needed for response reconstruction. Version 1 does not require completed read or search records to retain a replayable result.
 
 ## Meaning
 
@@ -555,7 +563,7 @@ Moving the request to `completed/` does not alter entity state or advance the ge
 
 A request already present in `completed/` must not execute again.
 
-A repeated inbox delivery with the same request ID is handled as a duplicate and receives the previously recorded outcome.
+A repeated inbox delivery with the same request ID is handled as a duplicate under its request-family protocol. Only transaction commitment requires a durable outcome that can be reconstructed after archival; Version 1 does not require a completed read or search record to preserve its prior result for replay.
 
 ---
 
@@ -626,7 +634,9 @@ They do not:
 * advance database generation;
 * mutate authoritative state.
 
-If a process stops before their result is durably retained, they may be re-executed only according to the duplicate-request and original-generation rules in their protocol documents.
+Subete processes only one request at a time. While a read or search is executing or its reply is being delivered, no other request may mutate the database. Therefore, if the process stops before the request is completed, recovery discards any incomplete temporary response file, retains the claimed request, and reruns the read or search against the unchanged committed generation. It then publishes the completed response according to `filetalk-protocol.md`, using atomic replacement when it is available and the protocol's tolerant direct-write delivery otherwise, and archives the request normally.
+
+This recovery rule does not require a durable read or search outcome record. It applies only to an unfinished claimed request; a request already archived as completed or failed is handled as a duplicate by its request-family protocol.
 
 ---
 
@@ -642,7 +652,7 @@ No recovery mutation may begin without writer authority.
 
 ## 2. Validate Database Identity and Core Layout
 
-Read `identity.json`, configuration, and required storage locations.
+Read `identity.json`, configuration, `generation.json`, and required storage locations. Confirm that the generation record identifies this database.
 
 Do not proceed against an ambiguous or mismatched database identity.
 
@@ -653,6 +663,7 @@ Enumerate:
 * temporary journal files;
 * pending journal entries;
 * committed journal entries;
+* the authoritative published generation record;
 * sequence consistency;
 * duplicate or conflicting files.
 
@@ -671,16 +682,16 @@ For each pending journal entry, beginning with the lowest sequence:
 5. apply every remaining transition to after-state;
 6. prepare required derived cache entries and record their pending target generation;
 7. move the journal entry to `committed/`;
-8. advance generation to its sequence;
+8. publish `generation.json` at the entry sequence;
 9. publish required derived services as current for the committed generation.
 
 Normal request service remains unavailable until all recoverable pending transactions are resolved.
 
 ## 5. Reconcile Generation State
 
-The recognized database generation must equal the highest contiguous committed journal sequence represented by the current authoritative state.
+`generation.json` is the authoritative recognized database generation. It must equal the highest contiguous committed journal sequence represented by the current authoritative state, except where older committed entries were deliberately compacted behind a valid checkpoint and snapshot chain.
 
-A gap, conflict, or impossible state causes recovery error rather than guessed advancement.
+A committed journal entry newer than `generation.json` requires validated generation publication. A pending entry newer than `generation.json` requires ordinary pending-transaction recovery. A gap, conflict, impossible journal/generation combination, or insufficient compacted recovery chain causes recovery error rather than guessed advancement.
 
 ## 6. Inspect Claimed Requests
 
@@ -760,7 +771,7 @@ Explicit maintenance or operator intervention may be required.
 * No authoritative mutation occurs before a complete journal entry exists in `journal/pending/`.
 * Once a complete pending journal entry exists, Subete must recover that transaction to its intended after-state.
 * A partial physical transaction state is never exposed as a committed world.
-* The generation advances only after authoritative mutation is complete and the journal entry is committed.
+* The generation advances only after authoritative mutation is complete, the journal entry is in `committed/`, and `generation.json` is published at that sequence.
 * Reply failure never reverses a committed transaction.
 * Request archival never determines transaction commitment.
 * Startup recovery completes before normal service begins.

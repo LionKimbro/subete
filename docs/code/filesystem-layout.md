@@ -10,6 +10,7 @@ The initial layout is:
 subete-data/
   identity.json
   configuration.json
+  generation.json
   lock.json
 
   entities/
@@ -61,6 +62,14 @@ Configuration does not itself contain authoritative entity facts.
 
 The exact format is defined separately.
 
+### `generation.json`
+
+`generation.json` is the authoritative durable record of the latest committed database generation and its establishing journal sequence.
+
+It is operational metadata used by transaction commitment, startup recovery, restoration, and journal compaction. It is not a descriptive status file.
+
+The exact format and transitional recovery rules are defined in `formats/generation.md`.
+
 ### `lock.json`
 
 `lock.json` is used by the surrounding `lionscliapp` command framework to coordinate commands and process ownership.
@@ -75,7 +84,7 @@ Subete does not define a second independent locking system inside this document.
 
 `entities/` is the initial authoritative backing store for entity and aspect data.
 
-In the initial implementation, each entity is represented by a file beneath this directory.
+In Version 1, each entity is represented by a file beneath this directory. Version 1 has no hybrid or SQLite-backed authoritative aspect storage.
 
 The directory is initially flat. Entity files are not sharded into subdirectories until scale or filesystem behavior demonstrates a concrete need.
 
@@ -83,7 +92,7 @@ The exact entity filename convention and file format are defined separately.
 
 Only the authoritative Subete writer may modify files under `entities/`.
 
-The authoritative datastore is a logical concept rather than a permanent commitment to one physical format. Later versions may store particular aspects in SQLite or other authoritative stores. When that occurs, those stores become additional parts of the authoritative datastore and must participate fully in transactions, journaling, recovery, snapshots, and generation consistency.
+The authoritative datastore is a logical concept rather than a permanent commitment to one physical format. A future version may store particular aspects in SQLite or other authoritative stores. Such hybrid storage is out of Version 1 scope. When it is introduced, those stores must participate fully in transactions, journaling, recovery, snapshots, and generation consistency.
 
 `entities/` remains authoritative for all entity state assigned to it. Data must not silently exist in two competing authoritative locations.
 
@@ -200,9 +209,9 @@ A claimed request may still be awaiting validation, execution, recovery, or resp
 
 `inbox-processing/completed/` contains requests that completed successfully.
 
-Completed request records support inspection, auditing, duplicate-request detection, and recovery from uncertain response delivery.
+Completed request records support inspection, auditing, and duplicate-request detection. For transactions, committed journal history supports recovery from uncertain response delivery; Version 1 does not require completed read or search records to retain their response bodies.
 
-Retention or compaction policy may later remove old completed requests when their identity and outcome remain safely represented elsewhere.
+Retention or compaction policy may later remove old completed requests when their required identity and transaction-outcome information remain safely represented elsewhere.
 
 ### `inbox-processing/failed/`
 
@@ -279,6 +288,7 @@ The initial paths have the following roles:
 | ----------------------------- | ---------------------------------------------------------- |
 | `identity.json`               | Stable identity of the database                            |
 | `configuration.json`          | Operational configuration                                  |
+| `generation.json`             | Authoritative published committed generation               |
 | `lock.json`                   | `lionscliapp` locking coordination                         |
 | `entities/`                   | Initial authoritative entity datastore                     |
 | `link-cache/`                 | Derived, rebuildable lookup of link entities by endpoint   |

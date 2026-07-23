@@ -89,7 +89,7 @@ Otherwise, transaction processing must pause for the period needed to capture th
 
 A normal snapshot creation proceeds as follows:
 
-1. Select the current committed generation to capture.
+1. Read `generation.json` and select its current committed generation to capture.
 2. Establish a consistent view of every authoritative storage mechanism at that generation.
 3. Create a temporary snapshot workspace.
 4. Copy or export every authoritative store required for recovery.
@@ -259,9 +259,10 @@ A normal restoration proceeds as follows:
 8. Identify committed journal entries whose sequence is greater than `replay-after`.
 9. Replay those entries in ascending sequence order.
 10. Resolve any pending transaction after the committed sequence.
-11. Rebuild or reconcile required derived structures.
-12. verify the resulting authoritative world and generation.
-13. Publish status and resume ordinary service.
+11. Publish `generation.json` for the resulting restored generation after validating the recovered authoritative world and journal/checkpoint chain.
+12. Rebuild or reconcile required derived structures.
+13. verify the resulting authoritative world and generation.
+14. Publish status and resume ordinary service.
 
 Ordinary reads, searches, and transactions must not observe an incomplete restoration.
 
@@ -279,7 +280,7 @@ For each replayed journal entry, Subete:
 4. applies any remaining transition to the after-state;
 5. confirms that every affected authoritative store matches the after-state;
 6. reconciles required derived structures;
-7. advances the restored generation to that journal sequence.
+7. publishes `generation.json` at that journal sequence before continuing to the next entry.
 
 Replay must be idempotent.
 
@@ -429,3 +430,4 @@ resume service
 * Restoration replays journals in sequence order.
 * A pending transaction remains a recovery obligation after restoration.
 * Missing or inconsistent recovery artifacts are rejected rather than silently trusted.
+* `generation.json` is the authoritative durable record of the recovered current generation; after journal compaction, its value is valid only with the retained checkpoint and snapshot recovery chain.

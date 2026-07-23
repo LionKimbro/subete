@@ -962,10 +962,11 @@ CRUD and read requests use `request-id` to make repeated FileTalk delivery safe.
 When Subete receives a request whose `request-id` has already completed:
 
 * it must not execute the logical request again;
-* it should reproduce or redeliver the recorded outcome;
 * a committed transaction must retain its original journal sequence and generation;
-* a read may return its originally recorded result if Subete preserves that result;
-* Subete must not silently reinterpret the duplicate as a new request against a newer generation.
+* a committed transaction should reproduce or redeliver its recorded outcome;
+* Version 1 does not require a completed read request to retain a replayable result;
+* an unfinished claimed read is rerun during recovery at its unchanged observed generation, as defined in `state.md`;
+* a completed read duplicate must not be silently treated as a new logical request against a newer generation.
 
 For transactions, committed journal history is sufficient to establish that the transaction has already been applied.
 

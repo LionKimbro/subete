@@ -205,3 +205,4 @@ An invalid checkpoint may be removed through an explicit maintenance or recovery
 * Loss of a checkpoint does not alter current authoritative entity state.
 * A checkpoint must never claim a recovery boundary newer than the state represented by its snapshot.
 * Snapshots preserve state; checkpoints declare trusted recovery boundaries.
+* A checkpoint and its validated snapshot may establish the retained recovery chain for generations whose committed journal files have been compacted; root `generation.json` must not claim such a generation without that chain.

@@ -58,7 +58,8 @@ The same crash boundaries must later be tested with:
 * link creation;
 * link endpoint change;
 * link deletion;
-* mixed file and SQLite authoritative storage.
+
+Mixed file/SQLite authoritative storage is a future-extension test category and is not required for Version 1.
 
 ---
 
@@ -379,7 +380,7 @@ On restart:
 4. It applies every after-state.
 5. It applies or verifies all required cache changes.
 6. It commits the journal.
-7. It advances generation to `N + 1`.
+7. It publishes root `generation.json` at `N + 1`.
 8. It delivers the response.
 9. It completes the claimed request.
 
@@ -472,7 +473,7 @@ For a JSON entity file:
 * old file absent and new file present;
 * both old and replacement artifacts present.
 
-For SQLite-backed authoritative state:
+For a future SQLite-backed authoritative-storage extension:
 
 * before SQL transaction commit;
 * after SQL commit but before the caller records completion.
@@ -596,7 +597,7 @@ After all entity after-states are established:
 1. reconcile cache consequences;
 2. advance cache to target generation;
 3. commit the journal;
-4. advance database generation;
+4. publish root `generation.json` at the committed sequence;
 5. deliver the response;
 6. archive the request.
 
@@ -688,7 +689,7 @@ Recovery:
 3. derives cache consequences from journaled before and after states;
 4. completes or rebuilds affected cache entries;
 5. prepares an updating cache record with published generation `N` and target generation `N + 1`;
-6. commits the journal and advances database generation;
+6. commits the journal and publishes root `generation.json` at `N + 1`;
 7. publishes the cache as current at generation `N + 1`.
 
 The cache must not be treated as current for generation `N + 1` before reconciliation completes.
@@ -753,7 +754,7 @@ Crash after:
 
 * every authoritative entity matches after-state;
 * all required cache entries are correct;
-* `generation.json` is prepared with `state = updating`, published generation `N`, and target generation `N + 1`;
+* `link-cache/generation.json` is prepared with `state = updating`, published generation `N`, and target generation `N + 1`;
 
 but before journal commitment.
 
@@ -790,7 +791,7 @@ It performs no logical entity mutation.
 It then:
 
 1. commits the pending journal;
-2. advances recognized database generation to `N + 1`;
+2. publishes root `generation.json` at `N + 1`;
 3. publishes the cache as current at `N + 1`;
 4. delivers the response;
 5. archives the request.
@@ -859,11 +860,11 @@ Recovery determines whether the pending and committed artifacts represent the sa
 
 ### Only Pending Exists
 
-Finalize the move and advance generation.
+Finalize the move, then publish root `generation.json` at `N + 1`.
 
 ### Only Committed Exists
 
-Recognize sequence `N + 1` as committed after verifying authoritative after-state.
+Recognize sequence `N + 1` as journal-committed after verifying authoritative after-state. If root `generation.json` still reports `N`, publish it at `N + 1`; if it already reports `N + 1`, retain it after validation.
 
 ### Identical Copies Exist
 
@@ -877,11 +878,11 @@ Recovery must never apply the transaction as a new sequence.
 
 ---
 
-# Boundary 13 — After Journal Commitment, Before Cache-Current Publication
+# Boundary 13 — After Journal Commitment and Generation Publication, Before Cache-Current Publication
 
 ## Injection Point
 
-Crash after the journal record is committed and generation has logically advanced, but before the cache is published as current and before response construction or delivery.
+Crash after the journal record is committed and root `generation.json` has published the new generation, but before the cache is published as current and before response construction or delivery.
 
 Conceptually:
 
@@ -1352,7 +1353,9 @@ unless an endpoint is shared between before and after.
 
 ---
 
-# Boundary 26 — Authoritative SQLite Commit
+# Future Extension Boundary — Authoritative SQLite Commit
+
+This boundary is not part of the Version 1 failure-injection requirement. It defines the additional test coverage required if a future version introduces SQLite-backed authoritative aspects.
 
 When authoritative aspects are stored in SQLite, test at least:
 
@@ -1465,6 +1468,21 @@ It must not:
 The original transaction outcome remains intact.
 
 ---
+
+# Read and Search Recovery Before Completion
+
+Inject a crash after a read or search has executed but before its response is completely delivered or the claimed request is archived.
+
+Expected recovery result:
+
+1. discard or ignore any incomplete temporary response artifact;
+2. retain the claimed request;
+3. confirm that no later request ran while it was claimed;
+4. rerun the read or search against the unchanged committed generation;
+5. deliver the completed response under `filetalk-protocol.md`;
+6. archive the request according to normal policy.
+
+The rerun must report the same observed generation as the interrupted execution. This test requires no durable read/search outcome record. It relies on the single-request execution model, not on replay against a later world.
 
 # Core Matrix
 

@@ -257,7 +257,7 @@ A snapshot is created only from committed state.
 
 A normal creation procedure is:
 
-1. identify the committed generation to capture;
+1. read root `generation.json` and identify its committed generation to capture;
 2. obtain a consistent view of every authoritative store at that generation;
 3. copy the required database identity, configuration, and authoritative stores;
 4. write `snapshot-manifest.json`;
@@ -281,6 +281,8 @@ Before restoring a snapshot, Subete validates:
 Restoration replaces or reconstructs the authoritative datastore from the snapshot.
 
 Committed journal entries after the snapshot generation may then be replayed.
+
+After replay and any required pending-transaction recovery establish one coherent world, Subete publishes root `generation.json` for the resulting generation before ordinary service resumes. A stale or absent status file is never a substitute for this step.
 
 ## Configuration
 

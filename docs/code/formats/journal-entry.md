@@ -319,9 +319,11 @@ Recovery continues until every affected entity matches its intended after-state.
 After every affected entity and authoritative backing store matches the intended after-state:
 
 1. the journal entry moves to `journal/committed/`;
-2. the database generation becomes the entry’s sequence number;
+2. `generation.json` is published with the entry's sequence as its generation and journal sequence;
 3. derived structures required for current service are reconciled;
 4. the transaction result may be delivered to the caller.
+
+The journal move and `generation.json` publication are separate durable operations. Recovery must therefore recognize a committed entry whose sequence is newer than the published generation and finish generation publication without executing the transaction again.
 
 The journal file contents do not need to change when committed. Its directory location identifies whether it is pending or committed.
 

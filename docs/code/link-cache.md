@@ -509,8 +509,8 @@ When a transaction creates a link entity:
 6. the link ID is added to the incoming entry for `to`;
 7. affected cache files are written for the transaction target generation;
 8. `generation.json` remains at the last committed generation with `state` set to `"updating"` and `target-generation` set to the transaction generation;
-9. the journal transaction is committed and the database generation advances;
-10. `generation.json` is published as `"current"` at the new committed generation.
+9. the journal entry moves to `journal/committed/` and root `generation.json` publishes the new database generation;
+10. `link-cache/generation.json` is published as `"current"` at that committed generation.
 
 Example:
 
@@ -633,8 +633,8 @@ For each transaction:
 2. apply all required link-cache entry changes;
 3. verify affected cache entries;
 4. write `generation.json` with `state` set to `"updating"`, its `generation` left at the last committed generation, and `target-generation` set to the pending journal sequence;
-5. finalize journal commitment and advance the database generation;
-6. publish `generation.json` with `state` set to `"current"` and `generation` equal to the newly committed database generation.
+5. move the journal entry to `committed/` and publish root `generation.json` at the new database generation;
+6. publish `link-cache/generation.json` with `state` set to `"current"` and `generation` equal to the newly committed database generation.
 
 When a transaction does not affect a link entity or its link aspect, Step 2 has no cache-entry changes. The two-phase global generation publication still occurs.
 
@@ -666,7 +666,7 @@ Adding an already-present link ID is a no-op.
 
 Removing an already-absent link ID is a no-op.
 
-After the authoritative transaction after-state and all required cache entries are correct, recovery writes or verifies an `"updating"` cache record for the pending target generation, completes journal commitment, and then publishes the cache as `"current"` at the committed generation.
+After the authoritative transaction after-state and all required cache entries are correct, recovery writes or verifies an `"updating"` cache record for the pending target generation, moves the journal entry to `committed/`, publishes root `generation.json`, and then publishes the cache as `"current"` at the committed generation.
 
 ---
 

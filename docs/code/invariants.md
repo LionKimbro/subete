@@ -90,7 +90,7 @@ The database generation is the journal sequence number of the latest committed t
 
 The two values use the same numbering system.
 
-A transaction does not advance the database generation until its complete intended after-state has become authoritative.
+A transaction does not advance the database generation until its complete intended after-state has become authoritative, its journal entry is committed, and root `generation.json` has been published for that sequence.
 
 ## 9. Generations Identify Committed Worlds
 

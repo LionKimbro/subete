@@ -415,7 +415,9 @@ It determines whether a repeated request should:
 * reproduce a previous failure;
 * be rejected because the same request ID was reused with different content.
 
-It does not invent a new outcome for an already completed request.
+For an unfinished claimed read or search, it delegates to request recovery, which reruns the retained request at the unchanged generation under Subete's single-request execution model. Version 1 does not require completed or failed read/search records to preserve a replayable outcome.
+
+It does not invent a new outcome for an already completed transaction.
 
 ---
 
@@ -1027,7 +1029,7 @@ Only the following territories may change authoritative M1 state:
 
 Only journal writing allocates pending transaction sequence records.
 
-Only journal commitment advances recognized generation.
+Only journal commitment publishes root `generation.json` and advances recognized generation.
 
 Only the snapshot service creates full recovery captures.
 

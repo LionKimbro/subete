@@ -637,11 +637,9 @@ No ordering relationship is implied between separate searches in the same reques
 
 Search requests use `request-id` to make repeated FileTalk delivery safe.
 
-When Subete receives the same completed search request again:
+Version 1 does not require a completed search request record to retain a replayable result. A later duplicate must not be silently reinterpreted as a new logical search against a newer generation.
 
-* it must not silently reinterpret it as a new request against a newer generation;
-* it should reproduce or redeliver the originally recorded result;
-* the repeated reply retains the original observed generation.
+If the original search remains claimed because the process stopped before completion, startup recovery reruns it from the retained request. Subete's single-request execution model guarantees that no later request mutated the database between the interrupted search and that recovery, so the rerun observes the same generation. The response is then delivered under `filetalk-protocol.md`.
 
 If the same `request-id` is reused for materially different request content, Subete rejects it with `request-id-conflict`.
 
