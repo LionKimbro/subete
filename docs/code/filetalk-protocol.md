@@ -121,7 +121,7 @@ A sender delivers a message by writing a JSON file directly into the Subete inbo
 
 The sender may write directly to the final inbox filename.
 
-Atomic delivery by writing a temporary file and renaming it into the inbox is permitted, but it is not required.
+Atomic delivery by writing a temporary file and renaming it into the inbox is permitted, but it is not required. It is only available when the temporary file and final inbox filename are on the same filesystem; a move across drives or filesystems is not an atomic rename.
 
 Because direct writing is permitted, a file visible in the inbox may still be incomplete.
 
@@ -259,7 +259,7 @@ When the reply file cannot yet be read as one complete JSON reply object, the re
 
 The recipient may observe file size, modification time, and elapsed quiet time to identify a reply file that appears stale or abandoned.
 
-Atomic reply delivery remains a permitted optimization, but it is not required by this protocol.
+Atomic reply delivery remains a permitted optimization, but it is not required by this protocol. It is only available when the temporary file and final reply path are on the same filesystem; a move across drives or filesystems is not an atomic rename.
 
 ---
 

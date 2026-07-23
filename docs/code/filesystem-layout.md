@@ -178,9 +178,9 @@ The exact snapshot structure and lifecycle are defined separately.
 
 `inbox/` is the public request-entry surface.
 
-External programs submit FileTalk requests by placing complete request files into this directory.
+External programs submit FileTalk requests by placing request files into this directory.
 
-A request file must not become visible under its final inbox filename until its contents are complete. Callers should normally write to a temporary filename and then rename the file into place.
+FileTalk delivery is defined by `filetalk-protocol.md`. A caller may write directly to the final inbox filename, so a visible request file may still be incomplete. Writing a temporary file and atomically renaming it into place is a recommended optimization, not a requirement; it is possible only when the temporary and final paths are on the same filesystem. Subete must tolerate incomplete visible files by applying the FileTalk incomplete-file handling rules before claiming or processing a request.
 
 External programs may create requests under `inbox/`, but they must not modify Subete’s authoritative datastore, journal, checkpoints, snapshots, processing state, or status records.
 
