@@ -788,17 +788,20 @@ D:/subete-example/replies/44444444-4444-4444-8444-444444444444.json
   "generation": 42,
   "response": {
     "journal-sequence": 42,
-    "entities": {
-      "11111111-1111-4111-8111-111111111111": {
+    "entities": [
+      {
+        "entity": "11111111-1111-4111-8111-111111111111",
         "revision": 1
       },
-      "22222222-2222-4222-8222-222222222222": {
+      {
+        "entity": "22222222-2222-4222-8222-222222222222",
         "revision": 1
       },
-      "33333333-3333-4333-8333-333333333333": {
+      {
+        "entity": "33333333-3333-4333-8333-333333333333",
         "revision": 1
       }
-    }
+    ]
   }
 }
 ```
@@ -876,7 +879,7 @@ Both reads observe the same committed generation.
     "reads": [
       {
         "entity": "11111111-1111-4111-8111-111111111111",
-        "found": true,
+        "status": "found",
         "revision": 1,
         "aspects": {
           "tag:m1lattice.net,2026/aspect/basic": {
@@ -892,15 +895,19 @@ Both reads observe the same committed generation.
       },
       {
         "entity": "33333333-3333-4333-8333-333333333333",
-        "found": true,
+        "status": "found",
         "revision": 1,
-        "aspects": {
-          "tag:m1lattice.net,2026/aspect/link": {
-            "from": "11111111-1111-4111-8111-111111111111",
-            "to": "22222222-2222-4222-8222-222222222222",
-            "relationship": "participates-in"
+        "aspects": [
+          {
+            "aspect": "tag:m1lattice.net,2026/aspect/link",
+            "status": "found",
+            "value": {
+              "from": "11111111-1111-4111-8111-111111111111",
+              "to": "22222222-2222-4222-8222-222222222222",
+              "relationship": "participates-in"
+            }
           }
-        }
+        ]
       }
     ]
   }
@@ -948,18 +955,16 @@ inbox/search-alice-participation-link.json
   "request": {
     "searches": [
       {
-        "predicates": {
-          "has-aspects": [
-            "tag:m1lattice.net,2026/aspect/basic",
-            "tag:m1lattice.net,2026/aspect/link"
-          ],
-          "typehint": "link",
-          "tags": [
-            "participation",
-            "moon-garden"
-          ],
-          "name-contains": "alice"
-        }
+        "has-aspects": [
+          "tag:m1lattice.net,2026/aspect/basic",
+          "tag:m1lattice.net,2026/aspect/link"
+        ],
+        "typehint": "link",
+        "tags": [
+          "participation",
+          "moon-garden"
+        ],
+        "name-contains": "alice"
       }
     ]
   }
@@ -985,6 +990,7 @@ The participation link matches every predicate.
   "response": {
     "searches": [
       {
+        "index": 0,
         "entities": [
           "33333333-3333-4333-8333-333333333333"
         ]

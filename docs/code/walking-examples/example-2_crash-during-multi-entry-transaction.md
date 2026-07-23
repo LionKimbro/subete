@@ -1093,17 +1093,20 @@ It constructs the original logical success response rather than executing the tr
   "generation": 43,
   "response": {
     "journal-sequence": 43,
-    "entities": {
-      "11111111-1111-4111-8111-111111111111": {
+    "entities": [
+      {
+        "entity": "11111111-1111-4111-8111-111111111111",
         "revision": 2
       },
-      "22222222-2222-4222-8222-222222222222": {
+      {
+        "entity": "22222222-2222-4222-8222-222222222222",
         "revision": 2
       },
-      "33333333-3333-4333-8333-333333333333": {
+      {
+        "entity": "33333333-3333-4333-8333-333333333333",
         "revision": 2
       }
-    }
+    ]
   }
 }
 ```
