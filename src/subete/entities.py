@@ -3,7 +3,8 @@
 from copy import deepcopy
 from pathlib import Path
 from urllib.parse import quote, unquote
-from .fsio import read_json, write_json
+from . import fsio
+from .fsio import write_json
 from .identifiers import normalize_entity_id
 from .paths import path
 
@@ -32,7 +33,8 @@ def read_entity(entity_id):
     entity_file = entity_path(entity_id)
     if not entity_file.exists():
         return None
-    data = read_json(entity_file)
+    fsio.read_json(entity_file, ["required"])
+    data = fsio.read["data"]
     validate_entity_file(data, entity_id)
     return {"revision": data["revision"], "aspects": deepcopy(data["aspects"])}
 
@@ -57,7 +59,8 @@ def list_entity_ids():
     entity_ids = []
     for entity_file in path("entities").glob("*.json"):
         entity_id = entity_id_from_filename(entity_file.name)
-        data = read_json(entity_file)
+        fsio.read_json(entity_file, ["required"])
+        data = fsio.read["data"]
         validate_entity_file(data, entity_id)
         entity_ids.append(entity_id)
     return sorted(entity_ids)

@@ -1,10 +1,10 @@
 """FileTalk intake, claims, replies, and terminal request records."""
 
-import json
 import shutil
 from pathlib import Path
 
-from .fsio import read_json, write_json
+from . import fsio
+from .fsio import write_json
 from .paths import path
 
 g = {"observations": {}}
@@ -32,10 +32,10 @@ def discover_messages(now):
 
 def read_message_file(path):
     """Classify a candidate without treating incomplete JSON as bad input."""
-    try:
-        value = read_json(path)
-    except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError):
+    fsio.read_json(path)
+    if fsio.read["status"] != "complete":
         return {"state": "unreadable"}
+    value = fsio.read["data"]
     if not isinstance(value, dict):
         return {"state": "complete-non-object", "value": value}
     return {"state": "complete-object", "value": value}

@@ -416,11 +416,14 @@ Implement:
 * entity-ID and sequence filename encoding;
 * UUID canonicalization at every external/durable decoding boundary;
 * complete UTF-8 JSON reads;
-* deterministic JSON writes with trailing newline;
+* UTF-8 JSON writes with a trailing newline;
 * same-filesystem temporary writes, flush/close, `os.replace`, and the
-  documented file/directory sync policy;
-* tolerant read results that distinguish missing, temporarily
-  unreadable/incomplete, complete JSON, and wrong top-level type.
+  documented file/directory sync policy for files beneath the database root;
+* direct writes, without temporary sidecar files, to externally owned
+  FileTalk reply destinations;
+* tolerant JSON read states that distinguish missing, temporarily
+  unreadable/incomplete, and complete JSON; format validation distinguishes
+  wrong top-level type.
 
 Setup must be idempotent for an existing valid database and must never replace
 an existing `database-id`. Mismatched or ambiguous roots fail closed.
@@ -672,7 +675,9 @@ Implement the exact startup order:
 
 1. acquire writer authority;
 2. validate identity, layout, configuration, and root generation;
-3. inspect temp/pending/committed journals and sequence continuity;
+3. inspect database-owned temporary replacements, pending/committed journals,
+   and sequence continuity; remove only abandoned temporary files whose
+   filename and location establish Subete ownership;
 4. normalize byte-identical ambiguous journal moves;
 5. recover pending entries in ascending contiguous sequence order;
 6. reconcile committed journals newer than root generation;
@@ -699,6 +704,7 @@ Tests:
 * every generation/journal combination in `formats/generation.md`;
 * multiple contiguous pending entries;
 * gaps, conflicting sequences, wrong database IDs, malformed journals;
+* abandoned owned temporary files removed while unrelated files are retained;
 * current entity matching before, after, or neither;
 * identical versus conflicting duplicate journal files;
 * committed transaction with claimed request and missing/partial/complete

@@ -8,8 +8,15 @@ from pathlib import Path
 from .paths import path
 
 
+read = {
+    "data": None,
+    "status": None,
+    "path": None,
+}
+
+
 def read_json(source, flags=None):
-    """Read JSON from a named territory or an explicit Path object."""
+    """Read JSON into the current read register and return its status."""
     if flags is None:
         flags = []
 
@@ -19,15 +26,29 @@ def read_json(source, flags=None):
     if not isinstance(source, Path):
         raise TypeError("read_json source must be a territory name or Path")
 
-    if "verify-file" in flags and not source.is_file():
-        raise ValueError(f"existing database is missing {source.name}")
+    read["data"] = None
+    read["path"] = source
 
-    with source.open("r", encoding="utf-8") as handle:
-        return json.load(handle, parse_constant=_reject_non_json_constant)
+    try:
+        with source.open("r", encoding="utf-8") as handle:
+            read["data"] = json.load(handle, parse_constant=_reject_non_json_constant)
+    except FileNotFoundError:
+        read["status"] = "missing"
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+        read["status"] = "incomplete"
+    except OSError:
+        read["status"] = "unreadable"
+    else:
+        read["status"] = "complete"
+
+    if "required" in flags and read["status"] != "complete":
+        raise ValueError(f"required JSON file is {read['status']}: {source.name}")
+
+    return read["status"]
 
 
 def write_json(destination, data):
-    """Durably write JSON to a named territory or an explicit Path object."""
+    """Write JSON without leaving temporary files in external directories."""
     if isinstance(destination, str):
         destination = path(destination)
 
@@ -35,19 +56,48 @@ def write_json(destination, data):
         raise TypeError("write_json destination must be a territory name or Path")
 
     destination.parent.mkdir(parents=True, exist_ok=True)
+
+    if _is_within_database_root(destination):
+        _replace_database_json(destination, data)
+    else:
+        _write_external_json(destination, data)
+
+
+def _replace_database_json(destination, data):
+    """Atomically replace one JSON file in the database territory."""
     descriptor, temporary_name = tempfile.mkstemp(prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent)
     temporary = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
-            json.dump(data, handle, indent=2, ensure_ascii=False, allow_nan=False)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
+            _write_json(handle, data)
         os.replace(temporary, destination)
         _fsync_directory(destination.parent)
     finally:
         if temporary.exists():
             temporary.unlink()
+
+
+def _write_external_json(destination, data):
+    """Write directly to an external JSON destination that Subete does not own."""
+    with destination.open("w", encoding="utf-8", newline="\n") as handle:
+        _write_json(handle, data)
+
+
+def _write_json(handle, data):
+    """Write and flush one complete UTF-8 JSON document to an open file."""
+    json.dump(data, handle, indent=2, ensure_ascii=False, allow_nan=False)
+    handle.write("\n")
+    handle.flush()
+    os.fsync(handle.fileno())
+
+
+def _is_within_database_root(destination):
+    """Return whether the resolved destination remains in this database root."""
+    try:
+        destination.resolve().relative_to(path("root").resolve())
+    except (OSError, ValueError):
+        return False
+    return True
 
 
 def _fsync_directory(path):

@@ -77,7 +77,7 @@ def test_existing_database_requires_a_complete_configuration_file(tmp_path, use_
     setup_database()
     path("configuration").unlink()
 
-    with pytest.raises(ValueError, match="missing configuration.json"):
+    with pytest.raises(ValueError, match="missing: configuration.json"):
         init.init_system()
 
 
@@ -158,5 +158,104 @@ def test_setup_rejects_unknown_identity_metadata(tmp_path, use_database):
         setup_database()
 
 
+def test_setup_accepts_documented_optional_identity_metadata(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    identity = load(path("identity"))
+    identity["name"] = "lion_subete"
+    identity["title"] = "Lion's Subete"
+    save(path("identity"), identity)
+
+    assert setup_database() == "existing"
+
+
+def test_setup_rejects_an_invalid_identity_name(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    identity = load(path("identity"))
+    identity["name"] = "Lion Subete"
+    save(path("identity"), identity)
+
+    with pytest.raises(ValueError, match="lowercase identifier"):
+        setup_database()
+
+
+def test_setup_rejects_a_non_string_identity_title(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    identity = load(path("identity"))
+    identity["title"] = 1
+    save(path("identity"), identity)
+
+    with pytest.raises(ValueError, match="title must be a string"):
+        setup_database()
+
+
+def test_setup_rejects_missing_or_unknown_generation_fields(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    generation = load(path("generation"))
+    generation.pop("updated")
+    generation["unrecognized"] = True
+    save(path("generation"), generation)
+
+    with pytest.raises(ValueError, match="missing or unknown"):
+        setup_database()
+
+
+def test_setup_rejects_an_invalid_generation_number(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    generation = load(path("generation"))
+    generation["generation"] = -1
+    save(path("generation"), generation)
+
+    with pytest.raises(ValueError, match="non-negative integer"):
+        setup_database()
+
+
+def test_setup_rejects_invalid_polling_configuration(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    configuration_record = load(path("configuration"))
+    configuration_record["polling"]["stale-inbox-file-action"] = "guess"
+    save(path("configuration"), configuration_record)
+
+    with pytest.raises(ValueError, match="stale-inbox-file-action"):
+        init.init_system()
+
+
+def test_setup_rejects_relative_filetalk_reply_paths(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    configuration_record = load(path("configuration"))
+    configuration_record["filetalk"]["allowed-reply-paths"] = ["relative"]
+    save(path("configuration"), configuration_record)
+
+    with pytest.raises(ValueError, match="absolute paths"):
+        init.init_system()
+
+
+def test_setup_rejects_incomplete_durable_configuration_json(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    path("configuration").write_text('{"configuration-version":', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="incomplete: configuration.json"):
+        init.init_system()
+
+
 def load(path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def save(path, data):
+    path.write_text(json.dumps(data), encoding="utf-8")

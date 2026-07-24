@@ -6,7 +6,7 @@ import re
 from uuid import UUID
 
 from .constants import CONFIGURATION_VERSION, GENERATION_FORMAT_VERSION
-from .fsio import read_json
+from . import fsio
 
 
 UUID_TEXT = re.compile(
@@ -17,7 +17,8 @@ UTC_Z_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$"
 
 def validate_database_identity():
     """Validate the fixed identity record of the current database."""
-    data = read_json("identity", ["verify-file"])
+    fsio.read_json("identity", ["required"])
+    data = fsio.read["data"]
     _require_object(data, "identity.json")
     _require_record_keys(
         data,
@@ -33,7 +34,8 @@ def validate_database_identity():
 
 def validate_database_configuration():
     """Validate the fixed configuration record of the current database."""
-    data = read_json("configuration", ["verify-file"])
+    fsio.read_json("configuration", ["required"])
+    data = fsio.read["data"]
     _require_object(data, "configuration.json")
     _require_exact_keys(
         data,
@@ -47,8 +49,10 @@ def validate_database_configuration():
 
 def validate_database_generation():
     """Validate the fixed generation record of the current database."""
-    identity = read_json("identity", ["verify-file"])
-    data = read_json("generation", ["verify-file"])
+    fsio.read_json("identity", ["required"])
+    identity = fsio.read["data"]
+    fsio.read_json("generation", ["required"])
+    data = fsio.read["data"]
     _require_object(data, "generation.json")
     _require_record_keys(
         data,
