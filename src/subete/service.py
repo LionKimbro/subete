@@ -20,7 +20,8 @@ def process_one(paths, now):
         fail_request(paths, claimed, {"status": "failure", "error": str(error)})
     return True
 
-def run_service(dbroot):
+def run_service():
+    dbroot = app.execroot.get_execroot()
     paths = build_paths(dbroot); validate_existing_database(paths)
     recover_pending(paths, read_json_file(paths["identity"])["database-id"])
     try:

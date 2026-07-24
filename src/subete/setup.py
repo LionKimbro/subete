@@ -9,25 +9,39 @@ from .paths import build_paths, required_directories
 from .validation import validate_configuration, validate_generation, validate_identity
 
 
-def setup_database(dbroot):
+def setup_database():
     """Create a new database or validate the existing generation-zero foundation."""
+    dbroot = app.execroot.get_execroot()
+    
     paths = build_paths(dbroot)
     for directory in required_directories(paths):
         directory.mkdir(parents=True, exist_ok=True)
+    
     if paths["identity"].exists():
         validate_existing_database(paths)
-        return {"status": "existing", "database-id": read_json_file(paths["identity"])["database-id"]}
+        return {"status": "existing",
+                "database-id": read_json_file(paths["identity"])["database-id"]}
+    
     if paths["configuration"].exists() or paths["generation"].exists():
         raise ValueError("database root has metadata but no identity.json; refusing to initialize")
-    identity = {"database-id": str(uuid4()), "created": utc_now()}
+    
+    identity = {"database-id": str(uuid4()),
+                "created": utc_now()}
+    
     generation = {
-        "generation-format-version": GENERATION_FORMAT_VERSION, "database-id": identity["database-id"],
-        "generation": 0, "journal-sequence": 0, "updated": utc_now(),
+        "generation-format-version": GENERATION_FORMAT_VERSION,
+        "database-id": identity["database-id"],
+        "generation": 0,
+        "journal-sequence": 0,
+        "updated": utc_now(),
     }
+    
     write_json_replace(paths["identity"], identity)
     write_json_replace(paths["configuration"], INITIAL_CONFIGURATION)
     write_json_replace(paths["generation"], generation)
-    return {"status": "created", "database-id": identity["database-id"]}
+    
+    return {"status": "created",
+            "database-id": identity["database-id"]}
 
 
 def validate_existing_database(paths):

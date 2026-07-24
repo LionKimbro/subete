@@ -8,7 +8,7 @@ from .service import run_service
 
 def cmd_setup():
     """Create or validate the configured database root."""
-    result = setup_database(app.execroot.get_execroot())
+    result = setup_database()
     print(f"Subete database {result['status']}: {result['database-id']}")
 
 
@@ -17,7 +17,7 @@ def cmd_not_specified():
     print("This command is reserved; its Version 1 request protocol is not implemented yet.")
 
 def cmd_service():
-    run_service(app.execroot.get_execroot())
+    run_service()
 
 
 def declare_application():
