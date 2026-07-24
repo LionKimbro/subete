@@ -1,0 +1,59 @@
+import json
+
+import pytest
+
+from subete.paths import build_paths, required_directories
+from subete.setup import setup_database
+
+
+def test_setup_creates_complete_generation_zero_database(tmp_path):
+    dbroot = tmp_path / "database"
+
+    result = setup_database(dbroot)
+    paths = build_paths(dbroot)
+
+    assert result["status"] == "created"
+    assert all(path.is_dir() for path in required_directories(paths))
+    identity = load(paths["identity"])
+    configuration = load(paths["configuration"])
+    generation = load(paths["generation"])
+    assert identity["database-id"] == result["database-id"]
+    assert configuration["configuration-version"] == 1
+    assert configuration["filetalk"]["allowed-reply-paths"] == []
+    assert generation["database-id"] == result["database-id"]
+    assert generation["generation"] == 0
+    assert generation["journal-sequence"] == 0
+
+
+def test_setup_validates_instead_of_replacing_existing_identity(tmp_path):
+    dbroot = tmp_path / "database"
+    first = setup_database(dbroot)
+
+    second = setup_database(dbroot)
+
+    assert second == {"status": "existing", "database-id": first["database-id"]}
+
+
+def test_setup_refuses_partial_root_metadata(tmp_path):
+    dbroot = tmp_path / "database"
+    dbroot.mkdir()
+    (dbroot / "generation.json").write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="no identity"):
+        setup_database(dbroot)
+
+
+def test_setup_rejects_mismatched_existing_generation_identity(tmp_path):
+    dbroot = tmp_path / "database"
+    setup_database(dbroot)
+    generation_path = dbroot / "generation.json"
+    generation = load(generation_path)
+    generation["database-id"] = "00000000-0000-4000-8000-000000000000"
+    generation_path.write_text(json.dumps(generation), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="does not match"):
+        setup_database(dbroot)
+
+
+def load(path):
+    return json.loads(path.read_text(encoding="utf-8"))

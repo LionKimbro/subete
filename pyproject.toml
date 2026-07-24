@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "m1-subete"
+version = "0.1.0"
+description = "A durable, filesystem-backed authoritative M1 entity database."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["lionscliapp"]
+
+[project.scripts]
+subete = "subete.commands:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
