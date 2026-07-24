@@ -130,6 +130,13 @@ The `checkpoint` operation asks the running service to:
    exist;
 7. return the resulting artifact identities.
 
+The snapshot created or reused here is the Version 1 entity-store snapshot:
+its archive contains only `entities/` and `snapshot-manifest.json`.
+Checkpoint maintenance does not copy `configuration.json`, framework
+`config.json`, identity or generation files, locks, journals, checkpoints,
+FileTalk state, status data, temporary files, or link-cache data into the
+snapshot.
+
 ## Request
 
 ```json
@@ -186,6 +193,8 @@ The `checkpoint` operation asks the running service to:
   duplicate recovery artifacts merely because an earlier request was
   interrupted after snapshot publication.
 * Snapshot or checkpoint creation does not advance the generation.
+* Checkpoint creation does not read or copy `configuration.json` as snapshot
+  content.
 * A completed snapshot may remain available if later checkpoint publication
   fails. Such a partial maintenance outcome is reported as failure and must
   not be represented as a completed checkpoint operation.

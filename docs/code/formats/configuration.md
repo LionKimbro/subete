@@ -2,6 +2,11 @@
 
 `configuration.json` contains the operational configuration for one Subete database.
 
+It is machine-local operational state. It is not part of a snapshot, and
+snapshot restoration must not read, merge, replace, preserve, or otherwise
+operate on it. A destination database root must already have valid
+configuration before a restored database is operated.
+
 It is stored at the root of the Subete data directory:
 
 ```text

@@ -36,7 +36,8 @@ Every snapshot represents exactly one committed database generation.
 
 The snapshot generation identifies the complete authoritative world captured by the snapshot.
 
-Every authoritative storage mechanism included in the snapshot must represent that same generation.
+Every entity file included in the snapshot must represent that same
+generation.
 
 A snapshot must not combine:
 
@@ -76,8 +77,8 @@ Before snapshot creation begins:
 1. Subete must have exclusive authority appropriate to snapshot creation.
 2. The target generation must be fully committed.
 3. No partially applied transaction may be exposed as the target generation.
-4. Every authoritative storage mechanism required to reconstruct that generation must be available.
-5. Subete must be able to obtain one coherent view of those stores.
+4. The authoritative `entities/` store must be available.
+5. Subete must be able to obtain one coherent view of that store.
 
 Snapshot creation may occur while Subete is otherwise running only if the implementation can guarantee a consistent capture at one committed generation.
 
@@ -90,17 +91,21 @@ Otherwise, transaction processing must pause for the period needed to capture th
 A normal snapshot creation proceeds as follows:
 
 1. Read `generation.json` and select its current committed generation to capture.
-2. Establish a consistent view of every authoritative storage mechanism at that generation.
+2. Establish a consistent view of `entities/` at that generation.
 3. Create a temporary snapshot workspace.
-4. Copy or export every authoritative store required for recovery.
-5. Include `identity.json`.
-6. Include or account for operational configuration according to snapshot policy.
-7. Create `snapshot-manifest.json`.
-8. Record the database identity, generation, creation time, contents, and available integrity information.
-9. Package the snapshot as a directory or archive.
-10. Complete and close the snapshot artifact.
-11. Validate the completed artifact.
-12. Move or publish it under its final snapshot filename.
+4. Copy `entities/` into that workspace.
+5. Create `snapshot-manifest.json`.
+6. Record the database identity, generation, creation time, contents, and available integrity information in the manifest.
+7. Confirm that the workspace contains only `entities/` and `snapshot-manifest.json`.
+8. Package the snapshot as a directory or archive.
+9. Complete and close the snapshot artifact.
+10. Validate the completed artifact.
+11. Move or publish it under its final snapshot filename.
+
+Snapshot creation does not copy or otherwise capture `identity.json`,
+`configuration.json`, framework `config.json`, `generation.json`, locks,
+journals, checkpoints, FileTalk state, status data, temporary files, or
+derived data.
 
 The snapshot must not appear as a completed recovery artifact until all required contents and its manifest are complete.
 
@@ -115,8 +120,9 @@ Before a snapshot may be accepted as a recovery base, Subete validates at least:
 * the snapshot manifest;
 * database identity;
 * captured generation;
-* inclusion of every required authoritative store;
-* agreement among all included stores about the captured world;
+* inclusion of the complete `entities/` store;
+* absence of every member other than `entities/` and
+  `snapshot-manifest.json`;
 * required file presence;
 * archive readability;
 * any required checksums or integrity records.
@@ -231,7 +237,8 @@ Committed journal entries at or before a checkpoint boundary may be archived, co
 
 1. the checkpoint is valid;
 2. the referenced snapshot is valid;
-3. the snapshot contains every required authoritative store;
+3. the snapshot contains the complete authoritative `entities/` store and no
+   prohibited content;
 4. at least one complete recovery path remains;
 5. any configured redundancy or retention requirements are satisfied.
 
@@ -252,17 +259,33 @@ A normal restoration proceeds as follows:
 1. Select the highest suitable valid checkpoint, or an explicitly requested checkpoint.
 2. Read and validate the checkpoint.
 3. Locate and validate its referenced snapshot.
-4. Confirm database identity and restoration policy.
-5. place the current datastore into a safe maintenance state.
-6. Restore every authoritative storage mechanism from the snapshot.
-7. Establish the snapshot generation as the restoration base.
-8. Identify committed journal entries whose sequence is greater than `replay-after`.
-9. Replay those entries in ascending sequence order.
-10. Resolve any pending transaction after the committed sequence.
-11. Publish `generation.json` for the resulting restored generation after validating the recovered authoritative world and journal/checkpoint chain.
-12. Rebuild or reconcile required derived structures.
-13. verify the resulting authoritative world and generation.
+4. Confirm that the manifest database identity matches the destination
+   database's existing `identity.json`.
+5. Place the current datastore into a safe maintenance state.
+6. Replace the destination `entities/` store with the validated snapshot
+   `entities/` state.
+7. Publish the snapshot generation in root `generation.json` as the
+   restoration base.
+8. Identify applicable committed journal entries whose sequence is greater
+   than `replay-after`.
+9. Replay those entries in ascending sequence order through the normal
+   recovery machinery.
+10. Resolve any pending transaction after the committed sequence through the
+   normal recovery machinery.
+11. Validate the recovered authoritative world and journal/checkpoint chain.
+12. Rebuild required derived structures from authoritative state.
+13. Verify the resulting authoritative world and generation.
 14. Publish status and resume ordinary service.
+
+Restoration never reads, merges, replaces, preserves, or otherwise operates
+on `configuration.json`. It likewise does not restore root identity, locks,
+journals, checkpoints, FileTalk state, status data, temporary files, or
+derived data from the snapshot. Later journals and checkpoints used for
+recovery are destination recovery artifacts, not snapshot contents.
+
+Ensuring that the destination root has valid machine-local configuration
+before the restored database is operated is an external deployment
+precondition, not a restoration step.
 
 Ordinary reads, searches, and transactions must not observe an incomplete restoration.
 
@@ -313,13 +336,13 @@ The pending transaction is not ignored or rolled back merely because restoration
 
 # Derived Structures
 
-Derived structures such as search indexes and the link cache may be included in a snapshot, but authoritative recovery must not depend on them unless a separate specification explicitly makes that necessary.
+Derived structures such as search indexes and the link cache are not included
+in a Version 1 snapshot.
 
 After restoration:
 
-* a derived structure matching the restored generation may be accepted after validation;
-* a stale derived structure must be updated or rebuilt;
-* an absent derived structure may be rebuilt from authoritative state;
+* required derived structures are rebuilt from restored and replayed
+  authoritative state;
 * a derived structure must not claim a generation newer than the authoritative world.
 
 The Version 1 link cache must satisfy its own readiness rules before normal link service resumes.
@@ -423,7 +446,15 @@ resume service
 * A checkpoint may refer only to a completed and validated snapshot.
 * Snapshot creation and checkpoint creation do not advance database generation.
 * Snapshots contain committed state only.
-* Every authoritative storage mechanism required for recovery must be represented.
+* A Version 1 snapshot contains only `entities/` and
+  `snapshot-manifest.json`.
+* Configuration, operational state, recovery artifacts, temporary files, and
+  derived data are never snapshot contents.
+* Restoration never operates on `configuration.json`; the destination is
+  configured independently.
+* Restoration replaces `entities/`, publishes the snapshot generation,
+  replays applicable later journals through normal recovery, and rebuilds
+  derived structures.
 * Journal entries after the checkpoint boundary remain necessary for forward replay.
 * Older journal entries do not become deletable until a sufficient recovery path is established.
 * Existing checkpoints are not edited in place; a newer recovery boundary receives a new checkpoint.

@@ -85,7 +85,9 @@ It is descriptive and does not participate in database identity.
 * The filename is exactly `identity.json`.
 * There is exactly one `identity.json` at the database root.
 * `database-id` is the authoritative identity of the database.
-* Copying or restoring the same database preserves `database-id`.
+* Restoring the same database requires the snapshot manifest's `database-id`
+  to match the destination's existing `identity.json`; restoration does not
+  copy or replace this file.
 * Creating a distinct new database creates a new `database-id`.
 * `name` and `title` may be changed without changing database identity.
 * The file must not contain the current generation or other frequently changing operational state.

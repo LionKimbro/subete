@@ -184,29 +184,88 @@ implementation. Validation must test field presence independently from field
 value so a supplied `"value": null` is not mistaken for a missing `value`
 field.
 
-### Gate D: unspecified public operations
+### Gate D: public link lookup and maintenance operations — resolved
 
-There is no governing FileTalk family for:
+Version 1 extends the existing `search` request family with three predicates:
 
-* attached-link lookup;
-* snapshot/checkpoint maintenance requests;
-* remove-old/retention requests;
-* service shutdown.
+```text
+link-from
+link-to
+link-attached-to
+```
 
-Implement attached-link lookup and snapshot/checkpoint/retention logic as
-internal service functions with tests. Register `checkpoint` and `remove-old`
-only as clear, non-mutating “not yet specified” command placeholders. Do not
-expose any of these through an invented request family. Use normal process
-signals or `KeyboardInterrupt` for service shutdown until a protocol exists.
+They return the IDs of matching link entities. `link-attached-to` matches
+either endpoint and returns a self-link only once. These predicates combine
+with other predicates through the normal search-level AND rule. The link cache
+is an internal optimization and never appears in public requests or responses.
 
-### Gate E: restoration configuration policy
+Version 1 also defines one FileTalk request family:
 
-Snapshot restoration explicitly requires a policy for the machine-specific
-`configuration.json`, but Version 1 does not choose preserve, replace, or
-merge. Implement snapshot creation, validation, checkpoint publication, and
-journal replay foundations. Do not expose destructive restoration until Lion
-chooses the configuration policy and the operator-facing maintenance
-interface.
+```text
+request-type = maintenance
+```
+
+Its request contains exactly one operation:
+
+```text
+checkpoint
+remove-old
+stop
+```
+
+The public commands:
+
+```text
+subete checkpoint
+subete --maintenance.mode dry-run remove-old
+subete --maintenance.mode execute remove-old
+subete stop
+```
+
+are non-locking FileTalk clients to the running service. They post requests to
+the inbox and wait for replies. They never directly copy, remove, mutate,
+unlock, signal, or kill the live database service.
+
+Maintenance runs inside the service's strictly sequential request boundary.
+It does not mutate the M1 entity world, allocate a transaction journal
+sequence, create a pending/committed transaction journal entry, change entity
+revisions, or advance root generation.
+
+`checkpoint` captures one committed generation, validates the snapshot, and
+publishes its checkpoint before returning success.
+
+`remove-old` requires an explicit `dry-run` or `execute` mode. The service
+selects every candidate under its retention and recovery rules; the caller
+cannot submit arbitrary paths.
+
+After accepting `stop`, the service begins no later request. It delivers the
+successful response, archives the request as completed, returns through normal
+shutdown, and releases the writer lock through `lionscliapp`.
+
+Version 1 maintenance authorization relies on operating-system access to the
+database root, inbox, and allowed FileTalk reply paths. It has no separate
+authentication or role model.
+
+The governing details are in `docs/code/protocol-maintenance.md`,
+`docs/code/protocol-search.md`, and
+`docs/code/formats/maintenance-request.md`.
+
+### Gate E: snapshot and restoration scope — resolved
+
+A Version 1 snapshot captures the authoritative entity store only. Its
+archive contains exactly `entities/` and `snapshot-manifest.json`; the
+manifest carries only the metadata needed to identify and validate the
+snapshot, including database identity and generation.
+
+Snapshots contain no Subete or framework configuration, identity or
+generation files, locks, journals, checkpoints, FileTalk processing state,
+status/heartbeat/metrics, temporary files, or derived link-cache data.
+
+Restoration never reads, merges, replaces, preserves, or otherwise operates
+on `configuration.json`. The destination root must already have valid
+machine-local configuration. Restoration validates database identity,
+replaces `entities/`, publishes the snapshot generation, replays applicable
+later journals through normal recovery, and rebuilds derived structures.
 
 ## 4. Programming Shape
 
@@ -322,10 +381,10 @@ Implement:
 
 * `pyproject.toml`, entry point, README, and test runner;
 * explicit `lionscliapp` declarations for `setup`, `service`, `gui`,
-  `checkpoint`, and `remove-old`;
+  `checkpoint`, `remove-old`, and `stop`;
 * `uses_locking = True`;
 * lock flags on `setup` and `service`;
-* non-locking GUI and placeholder maintenance clients;
+* non-locking GUI and maintenance FileTalk client command surfaces;
 * the accepted Gate A database-root binding;
 * no module-load operational calls.
 
@@ -456,7 +515,8 @@ Implement:
 * one-at-a-time claimed-request lifecycle;
 * startup processing of unfinished claimed non-mutating requests;
 * read selected-aspect and all-aspect semantics;
-* full-scan search with the five Version 1 predicates;
+* full-scan search with the eight Version 1 predicates, including
+  `link-from`, `link-to`, and `link-attached-to`;
 * Unicode `casefold()` matching;
 * exact whitespace behavior;
 * AND combination;
@@ -474,6 +534,11 @@ Tests:
 * found empty entities;
 * stable all-aspect serialization;
 * every search predicate and every validation error;
+* link endpoint predicates return link entity IDs, not opposite endpoints;
+* a self-link appears once in `link-attached-to` results;
+* link predicates combine with other predicates through AND;
+* cache-backed and authoritative-scan link searches produce identical public
+  results;
 * malformed basic aspects are non-matches, not request failures;
 * multiple reads/searches see one generation;
 * repeat completed read/search behavior;
@@ -671,33 +736,61 @@ Tests:
 
 ### Stage 10: snapshots, checkpoints, and replay foundations
 
-Implement internally:
+Implement:
 
 * consistent snapshot capture while the sequential service pauses mutation;
 * separate temporary workspace and final ZIP publication;
 * `snapshot-manifest.json`;
 * database identity/generation/content validation;
-* inclusion of every authoritative store (`entities/` in Version 1);
-* optional inclusion of derived link cache, clearly marked derived;
+* an archive containing exactly `entities/` and
+  `snapshot-manifest.json`;
+* rejection of snapshots containing configuration, identity/generation
+  files, locks, journals, checkpoints, FileTalk state, status data,
+  temporary files, or derived data;
 * immutable checkpoint files written only after snapshot validation;
 * highest-valid-checkpoint selection with fallback;
 * ascending committed-journal replay using normal application logic;
 * pending-next-transaction recovery after replay;
-* derived-cache rebuild after authoritative restoration;
-* conservative retention analysis/dry-run as a pure plan.
+* restoration that replaces `entities/`, publishes the snapshot generation,
+  replays applicable later journals through normal recovery, and rebuilds
+  derived structures;
+* strict exclusion of `configuration.json` from every restoration action,
+  with valid machine-local destination configuration as a precondition;
+* conservative retention analysis/dry-run as a pure plan;
+* the `maintenance` request parser, validator, response construction, terminal
+  record retention, and duplicate resolution;
+* checkpoint and remove-old execution inside the sequential service;
+* non-locking FileTalk clients for `subete checkpoint`,
+  `subete remove-old`, and `subete stop`;
+* explicit `maintenance.mode` validation for remove-old;
+* successful stop response delivery and terminal archival before normal
+  lock-releasing shutdown;
+* refusal to begin a later request after accepting stop.
 
-Do not activate public checkpoint/remove-old/restoration commands before
-Gates D and E are resolved.
+Maintenance does not use the transaction journal or advance generation.
 
 Tests:
 
 * snapshot at generation zero and nonzero;
 * manifest/archive/identity/generation mismatch;
+* rejection of every prohibited snapshot member;
+* restoration leaves `configuration.json` byte-for-byte untouched;
+* restoration publishes the snapshot generation before replay and rebuilds
+  derived state after replay;
 * incomplete snapshot/checkpoint publication;
 * multiple checkpoints with invalid newest fallback;
 * replay after checkpoint produces the same authoritative world;
 * pending transaction after replay;
 * old journals remain until a complete recovery path is proven;
+* checkpoint requests return exact snapshot/checkpoint identities without
+  changing generation;
+* remove-old dry-run removes nothing;
+* remove-old execute accepts no caller paths and preserves every required
+  recovery chain;
+* terminal maintenance retries reproduce retained responses without
+  intentionally repeating operational effects;
+* stop delivers and archives success before exit, begins no later request,
+  and releases the writer lock normally;
 * retention never selects pending journals or the only valid recovery chain.
 
 ### Stage 11: full subprocess crash campaign
@@ -851,7 +944,9 @@ Version 1 is done only when:
 * every required crash boundary passes in a real subprocess;
 * both walking examples pass as conformance tests;
 * snapshot/checkpoint recovery paths validate and replay correctly;
-* unspecified maintenance/public protocols remain gated;
+* link-search and maintenance protocols have executable coverage;
+* restoration replaces only the authoritative entity store and never
+  operates on machine-local configuration;
 * README, packaging, test runner, and `docs/code/` accurately describe the
   finished implementation;
 * no deferred Version 2 machinery has entered the codebase.

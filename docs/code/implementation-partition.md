@@ -688,14 +688,15 @@ The link cache remains derived and rebuildable.
 
 # Snapshot Service
 
-The snapshot-service territory creates and validates full captures of authoritative state.
+The snapshot-service territory creates and validates captures of the
+Version 1 authoritative `entities/` store.
 
 It owns:
 
 * selecting a committed generation;
 * establishing a consistent capture boundary;
 * pausing transaction processing when required;
-* copying or exporting every authoritative store;
+* copying the complete `entities/` store;
 * constructing the snapshot manifest;
 * packaging the snapshot;
 * validating the completed snapshot;
@@ -703,6 +704,16 @@ It owns:
 * reporting snapshot success or failure.
 
 It does not write a checkpoint until snapshot validation succeeds.
+
+Its completed archive contains exactly `entities/` and
+`snapshot-manifest.json`. It does not capture configuration, framework
+configuration, identity or generation files, locks, journals, checkpoints,
+FileTalk state, status data, temporary files, or derived link-cache data.
+
+The restoration territory replaces `entities/`, publishes the snapshot
+generation, invokes normal recovery for applicable later journals, and
+rebuilds derived structures. It never operates on `configuration.json`; the
+destination's machine-local configuration remains outside restoration.
 
 The service runtime invokes this territory in response to a maintenance request or internal policy.
 

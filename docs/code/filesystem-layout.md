@@ -181,13 +181,28 @@ The exact checkpoint format and lifecycle are defined separately.
 
 ### `snapshots/`
 
-`snapshots/` contains preserved recoverable representations of the authoritative datastore at identified generations.
+`snapshots/` contains preserved recoverable representations of the
+authoritative entity store at identified generations.
 
-A snapshot must include every authoritative storage mechanism needed to reconstruct the Subete world at that generation.
+A Version 1 snapshot archive contains exactly:
 
-Initially, this means the entity files and necessary database metadata. If authoritative SQLite databases or other stores are later introduced, complete recoverable copies of those stores must also be included.
+```text
+snapshot-manifest.json
+entities/
+```
 
-Each snapshot includes or is accompanied by a manifest describing its database identity, generation, creation time, contents, and integrity information.
+The manifest carries the database identity, generation, creation time,
+contents, and integrity information needed to identify and validate the
+snapshot. Root identity and generation files themselves are not snapshot
+members.
+
+A snapshot must not contain `configuration.json`, framework `config.json`,
+locks, journals, checkpoints, inbox or request-processing state, status,
+heartbeat, metrics, temporary files, or derived link-cache data.
+
+Restoration replaces `entities/` only. It never reads, merges, replaces,
+preserves, or otherwise operates on `configuration.json`; the destination
+root must already have valid machine-local configuration before operation.
 
 Snapshots are archival recovery artifacts. Their presence does not make them the current authoritative datastore.
 
@@ -314,7 +329,7 @@ The initial paths have the following roles:
 | `journal/pending/`            | Complete transactions awaiting application or finalization |
 | `journal/committed/`          | Ordered committed transaction history                      |
 | `journal/checkpoints/`        | Durable recovery-boundary records                          |
-| `snapshots/`                  | Complete recoverable state captures                        |
+| `snapshots/`                  | Entity-store snapshots with embedded manifests             |
 | `inbox/`                      | Public FileTalk request-entry surface                      |
 | `inbox-processing/claimed/`   | Requests owned by Subete                                   |
 | `inbox-processing/completed/` | Successfully completed requests                            |

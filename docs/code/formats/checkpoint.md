@@ -158,11 +158,23 @@ To recover from a checkpoint, Subete:
 
 1. reads and validates the checkpoint;
 2. locates the referenced snapshot;
-3. verifies the snapshot database identity and generation;
-4. restores the authoritative stores represented by the snapshot;
-5. establishes the checkpoint generation;
-6. replays committed journal entries with sequence numbers greater than `replay-after`;
-7. resolves any pending journal entry according to the transaction recovery rules.
+3. verifies the snapshot database identity against the destination's existing
+   `identity.json` and verifies the snapshot generation;
+4. verifies that the snapshot contains only `entities/` and
+   `snapshot-manifest.json`;
+5. replaces the authoritative `entities/` store from the snapshot;
+6. publishes the checkpoint/snapshot generation in root `generation.json`;
+7. replays applicable committed journal entries with sequence numbers greater
+   than `replay-after` through normal recovery;
+8. resolves any pending journal entry according to the transaction recovery
+   rules;
+9. rebuilds required derived structures.
+
+Recovery does not restore identity, configuration, journals, checkpoints,
+operational state, or derived data from the snapshot. In particular, it never
+reads, merges, replaces, preserves, or otherwise operates on
+`configuration.json`; the destination must already be configured for its
+machine.
 
 A missing, malformed, or inconsistent checkpoint must not be silently trusted.
 
@@ -200,6 +212,8 @@ An invalid checkpoint may be removed through an explicit maintenance or recovery
 * A checkpoint references exactly one snapshot.
 * The checkpoint and snapshot must agree on database identity and generation.
 * A checkpoint contains no authoritative entity or aspect values.
+* Its referenced Version 1 snapshot contains only `entities/` and
+  `snapshot-manifest.json`.
 * A checkpoint does not advance the database generation.
 * Creating a checkpoint is not a transaction over the M1 world.
 * Loss of a checkpoint does not alter current authoritative entity state.

@@ -126,11 +126,22 @@ The cache must be safely discardable and reconstructable from authoritative stor
 
 ## 12. Snapshots Preserve; They Do Not Govern
 
-A snapshot preserves a complete recoverable representation of authoritative state at an identified generation, including every authoritative aspect-storage mechanism required to reconstruct that state.
+A Version 1 snapshot preserves the authoritative `entities/` store at one
+identified committed generation. Its archive contains only `entities/` and
+`snapshot-manifest.json`.
+
+Configuration, identity files, locks, journals, checkpoints, FileTalk state,
+status data, temporary files, and derived structures are not snapshot
+contents.
 
 A snapshot does not become the current authoritative world merely by existing.
 
-Restoring a snapshot is an explicit operation that re-establishes a database state and then performs any required journal replay.
+Restoring a snapshot is an explicit operation that replaces `entities/`,
+publishes the snapshot generation, performs applicable later journal replay
+through normal recovery, and rebuilds derived structures.
+
+Restoration does not operate on `configuration.json`. The destination
+database is configured independently of its restored entity state.
 
 ## 13. Checkpoints Mark Recovery Boundaries
 

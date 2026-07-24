@@ -31,11 +31,10 @@ containing:
 
 ```text
 snapshot-manifest.json
-identity.json
-configuration.json
 entities/
-...
 ```
+
+These are the only two top-level members of a Version 1 snapshot.
 
 ## Snapshot Filename
 
@@ -65,14 +64,6 @@ Example:
   "generation": 10000,
   "created": "2026-07-23T23:09:42Z",
   "contents": [
-    {
-      "path": "identity.json",
-      "kind": "database-identity"
-    },
-    {
-      "path": "configuration.json",
-      "kind": "configuration"
-    },
     {
       "path": "entities/",
       "kind": "authoritative-store"
@@ -107,7 +98,9 @@ Identifies the structure of the snapshot and its manifest.
 
 The stable identity of the database represented by the snapshot.
 
-It must agree with the included `identity.json`.
+The snapshot does not contain `identity.json`. During restoration,
+`database-id` must agree with the destination database's existing
+`identity.json`.
 
 ### `generation`
 
@@ -121,7 +114,8 @@ It must agree with the included `identity.json`.
 
 The committed database generation captured by the snapshot.
 
-Every authoritative store included in the snapshot must represent this same generation.
+Every entity file included in the snapshot must represent this same
+generation.
 
 ### `created`
 
@@ -144,7 +138,9 @@ The UTC time at which snapshot construction completed.
 }
 ```
 
-Lists the files, directories, or authoritative stores contained in the snapshot.
+Lists the authoritative content contained in the snapshot.
+
+In Version 1 this array contains exactly one entry for `entities/`.
 
 Each entry contains:
 
@@ -179,16 +175,13 @@ Absolute paths are forbidden.
 
 Describes the role of the included content.
 
-Typical values include:
+The Version 1 value is:
 
 ```text
-database-identity
-configuration
 authoritative-store
-supporting-metadata
 ```
 
-Additional kinds may be introduced as the storage architecture evolves.
+Additional kinds require a later snapshot-format version.
 
 ### `entity-count`
 
@@ -204,34 +197,46 @@ The number of logical entities represented in the snapshot.
 
 This is descriptive validation information. It does not define snapshot contents.
 
-## Authoritative Stores
+## Exact Snapshot Scope
 
-A snapshot must include every authoritative storage mechanism necessary to reconstruct the complete logical Subete world at its generation.
+A Version 1 snapshot captures the authoritative entity store only.
 
-Initially, this includes:
+It contains exactly:
 
 ```text
+snapshot-manifest.json
 entities/
 ```
 
-If hybrid storage is introduced, the snapshot must also include complete recoverable representations of any authoritative SQLite databases or other backing stores.
+It must not contain:
 
-Derived structures such as search indexes and the link cache may be included to accelerate restoration, but they are not required for authoritative recovery because they are rebuildable.
+* `configuration.json`;
+* framework `config.json`;
+* `identity.json`;
+* `generation.json`;
+* locks;
+* journals;
+* checkpoints;
+* inbox or request-processing state;
+* status, heartbeat, or metrics;
+* temporary files;
+* link-cache or other derived data.
 
-If derived structures are included, the manifest must distinguish them from authoritative stores.
+Database identity and generation are carried as validation metadata in
+`snapshot-manifest.json`; their root files are not copied into the archive.
+If a future storage design adds another authoritative store, that design
+requires a later snapshot-format version rather than silently widening the
+Version 1 archive.
 
 ## Consistent Generation
 
 A snapshot must represent one coherent committed generation.
 
-Snapshot creation must not combine:
+Snapshot creation must not combine entity files from different generations
+or include partially applied, temporary, or speculative state.
 
-* entity files from one generation;
-* an authoritative SQLite store from another generation;
-* partially applied transaction state;
-* temporary or speculative values.
-
-Subete must use a snapshot procedure that obtains a consistent view across every authoritative store.
+Subete must obtain a consistent view of `entities/` at the selected committed
+generation.
 
 ## Integrity Information
 
@@ -245,7 +250,9 @@ Content entries may include integrity information:
 }
 ```
 
-For a directory, integrity may instead be represented by a separate inventory or digest file included in the snapshot.
+Any file inventory or digest information required by snapshot policy must be
+stored inside `snapshot-manifest.json`; it must not add another snapshot
+member.
 
 Integrity fields are optional unless required by snapshot policy.
 
@@ -258,8 +265,8 @@ A snapshot is created only from committed state.
 A normal creation procedure is:
 
 1. read root `generation.json` and identify its committed generation to capture;
-2. obtain a consistent view of every authoritative store at that generation;
-3. copy the required database identity, configuration, and authoritative stores;
+2. obtain a consistent view of `entities/` at that generation;
+3. copy `entities/` into the temporary snapshot workspace;
 4. write `snapshot-manifest.json`;
 5. complete and close the snapshot artifact;
 6. validate the snapshot sufficiently for recovery use;
@@ -272,25 +279,33 @@ Creating a snapshot does not advance the database generation.
 Before restoring a snapshot, Subete validates:
 
 * the manifest structure;
-* the database identity;
+* agreement between manifest `database-id` and the destination
+  `identity.json`;
 * the snapshot generation;
-* the presence of every required authoritative store;
+* that the archive contains exactly `snapshot-manifest.json` and `entities/`;
 * any required integrity information;
 * consistency with the selected checkpoint, when one is used.
 
-Restoration replaces or reconstructs the authoritative datastore from the snapshot.
+Restoration replaces the destination `entities/` store with the validated
+snapshot state and publishes the snapshot generation in root
+`generation.json`.
 
-Committed journal entries after the snapshot generation may then be replayed.
+Applicable committed journal entries after the snapshot generation are then
+replayed through the normal recovery machinery. Any pending next transaction
+is resolved by that same machinery, and derived structures are rebuilt.
 
 After replay and any required pending-transaction recovery establish one coherent world, Subete publishes root `generation.json` for the resulting generation before ordinary service resumes. A stale or absent status file is never a substitute for this step.
 
 ## Configuration
 
-The snapshot may preserve the database’s `configuration.json`, but restoration policy determines whether that configuration is restored verbatim, merged, or replaced by environment-specific configuration.
+`configuration.json` is outside snapshot restoration entirely.
 
-The database identity and authoritative entity state are recovery-critical.
+Restoration must not read it as snapshot input, copy it into the snapshot,
+restore it, merge it, replace it, preserve it as part of a datastore swap, or
+otherwise operate on it.
 
-Operational configuration may contain machine-specific paths and therefore requires explicit handling.
+The destination database root must already have whatever valid machine-local
+configuration is required before the restored database is operated.
 
 ## Immutability
 
@@ -306,9 +321,13 @@ The generation may remain the same if the new artifact represents exactly the sa
 * The manifest is encoded as UTF-8.
 * A snapshot belongs to exactly one database identity.
 * A snapshot represents exactly one committed generation.
-* Every authoritative store required to reconstruct that generation is included.
+* A Version 1 snapshot contains exactly `snapshot-manifest.json` and
+  `entities/`.
 * A snapshot contains no partial transaction state.
-* Derived structures, when included, must be identified as derived.
+* A snapshot contains no configuration, operational state, recovery
+  artifacts, temporary files, or derived data.
+* Restoration operates on the authoritative entity store and generation,
+  never on `configuration.json`.
 * Creating or deleting a snapshot does not alter current authoritative entity state.
 * Creating a snapshot does not advance the database generation.
 * A snapshot does not become a recovery checkpoint merely by existing.

@@ -204,7 +204,8 @@ A generation identifies an authoritative state of the Subete world.
 
 ## Snapshots
 
-A snapshot is a complete preserved copy of authoritative database state at a specific generation.
+A Version 1 snapshot is a complete preserved copy of the authoritative
+`entities/` store at a specific generation.
 
 Snapshots exist to make backup, restoration, transport, and historical preservation practical without requiring replay from the beginning of the journal.
 
@@ -214,6 +215,11 @@ A snapshot includes a manifest identifying at least:
 * the generation captured;
 * the time of capture;
 * the entity data included.
+
+The archive contains only `entities/` and `snapshot-manifest.json`. It does
+not contain configuration, framework configuration, identity or generation
+files, locks, journals, checkpoints, FileTalk processing state, status data,
+temporary files, or derived link-cache data.
 
 Snapshots are large state artifacts. They preserve the world as it existed at a defined generation.
 
@@ -228,8 +234,14 @@ A checkpoint records what durable recovery boundary has been established—for e
 During restoration, Subete can:
 
 1. load the checkpointed snapshot;
-2. establish the snapshot generation;
-3. replay committed journal transactions after that generation.
+2. replace the authoritative entity store;
+3. publish the snapshot generation;
+4. replay applicable later journals through normal recovery;
+5. rebuild derived structures.
+
+Restoration never reads, merges, replaces, preserves, or otherwise operates
+on `configuration.json`. Valid machine-local configuration must already exist
+at the destination.
 
 Snapshots contain state. Checkpoints describe the recovery boundary and how journal replay should proceed.
 
