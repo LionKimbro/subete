@@ -33,6 +33,8 @@ subete-data/
 
 The stable identity of this Subete database.
 
+The stored spelling is the canonical lowercase hyphenated UUID form.
+
 It is created when the database is initialized and must not change during ordinary operation, restart, upgrade, snapshot creation, or recovery.
 
 ### `created`
@@ -45,6 +47,8 @@ It is created when the database is initialized and must not change during ordina
 ```
 
 The UTC time at which this database identity was created.
+
+It must be an ISO 8601 UTC timestamp with a terminal `Z`.
 
 ### `name`
 
@@ -84,6 +88,8 @@ It is descriptive and does not participate in database identity.
 * `identity.json` contains one JSON object.
 * The filename is exactly `identity.json`.
 * There is exactly one `identity.json` at the database root.
+* It contains the required `database-id` and `created` fields, and may contain
+  only the documented optional `name` and `title` fields.
 * `database-id` is the authoritative identity of the database.
 * Restoring the same database requires the snapshot manifest's `database-id`
   to match the destination's existing `identity.json`; restoration does not

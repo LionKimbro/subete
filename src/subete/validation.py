@@ -1,19 +1,34 @@
 """Validation for root metadata formats used by the foundation."""
 
-from uuid import UUID
+from datetime import datetime
 from pathlib import Path
+import re
+from uuid import UUID
 
 from .constants import CONFIGURATION_VERSION, GENERATION_FORMAT_VERSION
 from .fsio import read_json
+
+
+UUID_TEXT = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+)
+UTC_Z_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$")
 
 
 def validate_database_identity():
     """Validate the fixed identity record of the current database."""
     data = read_json("identity", ["verify-file"])
     _require_object(data, "identity.json")
+    _require_record_keys(
+        data,
+        {"database-id", "created"},
+        {"name", "title"},
+        "identity.json",
+    )
     _require_uuid(data, "database-id")
-    if not isinstance(data.get("created"), str):
-        raise ValueError("identity.json created must be a timestamp string")
+    _require_utc_z_timestamp(data, "created", "identity.json")
+    _validate_identity_name(data)
+    _validate_identity_title(data)
 
 
 def validate_database_configuration():
@@ -35,18 +50,29 @@ def validate_database_generation():
     identity = read_json("identity", ["verify-file"])
     data = read_json("generation", ["verify-file"])
     _require_object(data, "generation.json")
+    _require_record_keys(
+        data,
+        {
+            "generation-format-version",
+            "database-id",
+            "generation",
+            "journal-sequence",
+            "updated",
+        },
+        set(),
+        "generation.json",
+    )
     _require_exact_int(data, "generation-format-version", GENERATION_FORMAT_VERSION)
     _require_uuid(data, "database-id")
     if data["database-id"] != identity["database-id"]:
         raise ValueError("generation.json database-id does not match identity.json")
-    generation = data.get("generation")
-    sequence = data.get("journal-sequence")
+    generation = data["generation"]
+    sequence = data["journal-sequence"]
     if not _is_nonnegative_int(generation):
         raise ValueError("generation.json generation must be a non-negative integer")
     if sequence != generation:
         raise ValueError("generation.json journal-sequence must equal generation in Version 1")
-    if not isinstance(data.get("updated"), str):
-        raise ValueError("generation.json updated must be a timestamp string")
+    _require_utc_z_timestamp(data, "updated", "generation.json")
 
 
 def _require_object(data, filename):
@@ -62,6 +88,40 @@ def _require_exact_int(data, key, value):
 def _require_exact_keys(data, keys, name):
     if set(data) != keys:
         raise ValueError(f"{name} has missing or unknown fields")
+
+
+def _require_record_keys(data, required_keys, optional_keys, name):
+    actual_keys = set(data)
+    missing_keys = required_keys - actual_keys
+    unknown_keys = actual_keys - required_keys - optional_keys
+
+    if missing_keys or unknown_keys:
+        raise ValueError(f"{name} has missing or unknown fields")
+
+
+def _require_utc_z_timestamp(data, key, name):
+    value = data[key]
+    if not isinstance(value, str) or not UTC_Z_TIMESTAMP.fullmatch(value):
+        raise ValueError(f"{name} {key} must be an ISO 8601 UTC Z timestamp")
+
+    try:
+        datetime.fromisoformat(value)
+    except ValueError as error:
+        raise ValueError(f"{name} {key} must be an ISO 8601 UTC Z timestamp") from error
+
+
+def _validate_identity_name(data):
+    if "name" not in data:
+        return
+
+    value = data["name"]
+    if not isinstance(value, str) or not re.fullmatch(r"[a-z][a-z0-9_-]*", value):
+        raise ValueError("identity.json name must be a lowercase identifier")
+
+
+def _validate_identity_title(data):
+    if "title" in data and not isinstance(data["title"], str):
+        raise ValueError("identity.json title must be a string")
 
 
 def _validate_polling_configuration(data):
@@ -95,8 +155,8 @@ def _validate_filetalk_configuration(data):
 
 
 def _require_uuid(data, key):
-    value = data.get(key)
-    if not isinstance(value, str):
+    value = data[key]
+    if not isinstance(value, str) or not UUID_TEXT.fullmatch(value):
         raise ValueError(f"{key} must be a UUID string")
     try:
         UUID(value)

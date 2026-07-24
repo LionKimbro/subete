@@ -46,6 +46,8 @@ subete-data/
 
 Must equal the stable identity in `identity.json`.
 
+The stored spelling is the canonical lowercase hyphenated UUID form.
+
 ### `generation`
 
 ```json
@@ -81,6 +83,8 @@ The journal sequence that establishes `generation`. In Version 1 it must equal `
 
 The UTC time at which this record was published.
 
+It must be an ISO 8601 UTC timestamp with a terminal `Z`.
+
 ## Publication and Recovery
 
 For transaction sequence `N + 1`, Subete applies the authoritative after-state, moves the complete journal entry to `journal/committed/`, and then publishes a complete replacement `generation.json` at `N + 1`. The journal move and generation-record replacement are separate filesystem operations and therefore cannot form one filesystem-atomic operation.
@@ -104,6 +108,7 @@ A newly initialized empty database publishes generation `0` and journal sequence
 ## Rules
 
 * The file contains exactly one UTF-8 JSON object.
+* It contains exactly the fields defined by this format version.
 * Only the authoritative Subete writer may replace it.
 * A replacement must be fully written, flushed, and closed before publication under the final filename.
 * Readers must tolerate a temporarily unreadable or incomplete visible replacement and retry; they must not substitute `status.json` as authority.

@@ -114,5 +114,49 @@ def test_setup_rejects_mismatched_existing_generation_identity(tmp_path, use_dat
         setup_database()
 
 
+@pytest.mark.parametrize(
+    "database_id",
+    [
+        "8B797903-EDCE-4B2A-96EB-B1C3845C6455",
+        "8b797903edce4b2a96ebb1c3845c6455",
+        "{8b797903-edce-4b2a-96eb-b1c3845c6455}",
+    ],
+)
+def test_setup_requires_canonical_database_uuid(tmp_path, use_database, database_id):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    identity = load(path("identity"))
+    identity["database-id"] = database_id
+    path("identity").write_text(json.dumps(identity), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="UUID string"):
+        setup_database()
+
+
+def test_setup_requires_real_utc_z_metadata_timestamps(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    identity = load(path("identity"))
+    identity["created"] = "2026-02-30T12:00:00Z"
+    path("identity").write_text(json.dumps(identity), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="UTC Z timestamp"):
+        setup_database()
+
+
+def test_setup_rejects_unknown_identity_metadata(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    setup_database()
+    identity = load(path("identity"))
+    identity["unrecognized"] = True
+    path("identity").write_text(json.dumps(identity), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="missing or unknown"):
+        setup_database()
+
+
 def load(path):
     return json.loads(path.read_text(encoding="utf-8"))
