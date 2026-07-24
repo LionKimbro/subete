@@ -393,6 +393,12 @@ Claiming does not imply that the request is valid or accepted.
 
 The parsing-and-validation territory converts a claimed JSON object into a recognized Subete request.
 
+This is a castle gate. A FileTalk request is external data until this territory
+accepts it. It performs the identifier validation and canonicalization needed
+to turn that data into internal facts. A future explicitly external
+programmatic API must provide an equivalent castle gate before it can invoke
+the internal request path.
+
 It owns validation of:
 
 * FileTalk-level message requirements;
@@ -422,6 +428,13 @@ structured failure data
 ```
 
 It does not mutate authoritative state.
+
+Later territories receive validated internal facts. They do not repeatedly
+normalize entity or aspect IDs, or revalidate complete request/entity
+structure during ordinary processing. Structural inspection of durable state
+belongs to health checks and startup recovery, where an incoherent database is
+reported as an error rather than silently repaired. Accepted Subete restore or
+import artifacts are trusted internal data and do not cross this gate.
 
 Protocol-specific validation may be divided into named functions by request family.
 

@@ -18,7 +18,7 @@ def test_entity_filename_encodes_tag_uri_and_round_trips():
     filename = entity_filename(entity_id)
 
     assert filename == "tag%3Am1lattice.net%2C2026%3Aexample%2Fa.json"
-    assert entities._entity_id_from_filename(filename) == entity_id
+    assert entities._read_entity_id_from_filename(filename) == entity_id
 
 
 def test_entity_store_writes_reads_and_orders_entities(tmp_path, use_database):
@@ -32,35 +32,6 @@ def test_entity_store_writes_reads_and_orders_entities(tmp_path, use_database):
     assert read_entity(alpha) == {"revision": 2, "aspects": {"tag:example.net,2026:aspect/a": {"x": 1}}}
     assert list_ids() == [alpha, beta]
     assert read_entity("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb") is None
-
-
-def test_entity_store_rejects_filename_record_mismatch(tmp_path, use_database):
-    use_database(tmp_path / "database")
-    setup_database()
-    entity_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-    entity_file = path("entities") / entity_filename(entity_id)
-    entity_file.write_text('{"entity":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","revision":1,"aspects":{}}', encoding="utf-8")
-
-    with pytest.raises(ValueError, match="does not match"):
-        read_entity(entity_id)
-
-
-def test_uppercase_uuid_is_canonicalized_at_storage_and_lookup(tmp_path, use_database):
-    use_database(tmp_path / "database")
-    setup_database()
-    uppercase = "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
-    canonical = uppercase.lower()
-
-    entities._write_complete_entity_state(uppercase, {"revision": 1, "aspects": {"BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB": None}})
-
-    assert (path("entities") / f"{canonical}.json").is_file()
-    assert read_entity(uppercase) == {"revision": 1, "aspects": {"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb": None}}
-
-
-@pytest.mark.parametrize("value", ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "{aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa}", "urn:uuid:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"])
-def test_entity_store_rejects_alternate_uuid_spellings(value):
-    with pytest.raises(ValueError):
-        entity_filename(value)
 
 
 def test_entity_store_preserves_every_json_aspect_value_kind(tmp_path, use_database):
@@ -112,20 +83,6 @@ def test_delete_entity_removes_the_authoritative_file(tmp_path, use_database):
 
     assert read_entity(entity_id) is None
     assert not entities._entity_path(entity_id).exists()
-
-
-def test_entity_file_rejects_unknown_fields_and_invalid_revisions(tmp_path, use_database):
-    use_database(tmp_path / "database")
-    setup_database()
-    entity_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-    entity_file = path("entities") / entity_filename(entity_id)
-    entity_file.write_text(
-        '{"entity":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","revision":0,"aspects":{},"extra":true}',
-        encoding="utf-8",
-    )
-
-    with pytest.raises(ValueError, match="missing or unknown"):
-        read_entity(entity_id)
 
 
 def test_entity_transition_distinguishes_entity_absence_from_a_null_aspect(tmp_path, use_database):

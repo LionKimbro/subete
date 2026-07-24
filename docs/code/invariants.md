@@ -149,6 +149,27 @@ A checkpoint is a small durable statement describing an accepted recovery bounda
 
 It identifies the state from which recovery may safely begin and how later journal entries relate to that state.
 
+## 14. Validation Occurs at Castle Gates
+
+Subete validates and canonicalizes data when it crosses from an external
+party into the database's internal world. Version 1's primary castle gate is
+the FileTalk request path beginning in `inbox/`. Any future explicitly
+external programmatic API is another castle gate.
+
+Once a request has passed a castle gate, its identifiers and structure are
+internal facts. Normal planning, journaling, storage, reads, searches, and
+recovery application rely on those facts rather than repeatedly normalizing or
+structurally validating them.
+
+An accepted Subete restore or import artifact is trusted Subete-produced data,
+not an external castle gate. It is not silently normalized during ordinary
+operation.
+
+Health checks and the startup structural correctness study may inspect the
+authoritative store for corruption or incoherence. They report failure or
+enter recovery error; they do not quietly repair, coerce, or canonicalize
+durable facts.
+
 A checkpoint is distinct from a snapshot and does not contain the full entity world.
 
 ## 14. Status Is Descriptive

@@ -675,15 +675,19 @@ Implement the exact startup order:
 
 1. acquire writer authority;
 2. validate identity, layout, configuration, and root generation;
-3. inspect database-owned temporary replacements, pending/committed journals,
+3. conduct an entity-store structural correctness study: parse every entity
+   file and verify its filename, identity, record shape, revision, aspect IDs,
+   and JSON values; enter recovery error rather than publish `ready` when the
+   authoritative store is structurally incoherent;
+4. inspect database-owned temporary replacements, pending/committed journals,
    and sequence continuity; remove only abandoned temporary files whose
    filename and location establish Subete ownership;
-4. normalize byte-identical ambiguous journal moves;
-5. recover pending entries in ascending contiguous sequence order;
-6. reconcile committed journals newer than root generation;
-7. reconcile/rebuild link cache;
-8. resolve claimed requests against journals and terminal records;
-9. publish `ready`.
+5. normalize byte-identical ambiguous journal moves;
+6. recover pending entries in ascending contiguous sequence order;
+7. reconcile committed journals newer than root generation;
+8. reconcile/rebuild link cache;
+9. resolve claimed requests against journals and terminal records;
+10. publish `ready`.
 
 Recovery reuses the same journal application, cache preparation, commitment,
 generation, response, and archival functions as normal execution. There must
@@ -704,6 +708,8 @@ Tests:
 * every generation/journal combination in `formats/generation.md`;
 * multiple contiguous pending entries;
 * gaps, conflicting sequences, wrong database IDs, malformed journals;
+* structurally malformed or filename-incoherent entity files enter recovery
+  error before the service publishes `ready`;
 * abandoned owned temporary files removed while unrelated files are retained;
 * current entity matching before, after, or neither;
 * identical versus conflicting duplicate journal files;
