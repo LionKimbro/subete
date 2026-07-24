@@ -44,8 +44,8 @@ module responsible for them.
 ```python
 def cmd_setup():
     init.init_system()
-    result = setup_database()
-    print(f"Subete database {result['status']}: {result['database-id']}")
+    status = setup_database()
+    print(f"Subete database {status}: {state.g['database-id']}")
 ```
 
 This makes the program easier to read and inspect.  A debugger can show

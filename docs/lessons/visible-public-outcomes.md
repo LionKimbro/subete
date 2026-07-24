@@ -10,26 +10,22 @@ behind a helper name.
 For Subete setup, the two outcomes should be visible together:
 
 ```python
-if path("identity").exists():
+if state.g["database-id"]:
     validate_database()
 
-    return {
-        "status": "existing",
-        "database-id": read_json("identity")["database-id"],
-    }
+    return "existing"
 
 ...
 
-return {
-    "status": "created",
-    "database-id": identity["database-id"],
-}
+return "created"
 ```
 
-This lets a reader understand the user-visible behavior without leaving
+This lets a reader understand the setup outcome without leaving
 `setup_database()`: an existing valid database is reported as
 `"existing"`, and a newly initialized database is reported as
-`"created"`.
+`"created"`.  The already-established database ID belongs in live
+process state, where the command layer can use it when presenting that
+outcome to the user.
 
 A helper is valuable when it owns a real named obligation, a separate
 piece of machinery, or a reusable operation.  A helper that only

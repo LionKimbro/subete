@@ -18,10 +18,7 @@ def setup_database():
     """Create a new database or validate the existing generation-zero foundation."""
     if state.g["database-id"]:
         validate_database()
-        return {
-            "status": "existing",
-            "database-id": state.g["database-id"],
-        }
+        return "existing"
 
     _create_required_directories()
     _reject_incomplete_root_metadata()
@@ -30,10 +27,7 @@ def setup_database():
     _write_initial_configuration_record()
     _write_generation_zero_record()
 
-    return {
-        "status": "created",
-        "database-id": state.g["database-id"],
-    }
+    return "created"
 
 
 def _create_required_directories():
@@ -62,6 +56,7 @@ def _create_identity_record():
 def _write_initial_configuration_record():
     """Write the fixed generation-zero configuration record."""
     write_json("configuration", INITIAL_CONFIGURATION)
+    state.load_configuration()
 
 
 def _write_generation_zero_record():

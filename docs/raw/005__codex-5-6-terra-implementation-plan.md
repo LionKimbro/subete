@@ -409,7 +409,7 @@ Implement:
 * every path from `filesystem-layout.md`;
 * setup that creates missing directories and generation zero;
 * stable `identity.json` creation/validation;
-* optional/defaulted `configuration.json` loading and strict known-field
+* complete required `configuration.json` loading and strict known-field
   validation;
 * root `generation.json` creation/validation;
 * UTC `Z` timestamps;

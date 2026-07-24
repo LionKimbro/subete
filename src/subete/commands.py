@@ -3,6 +3,7 @@
 import lionscliapp as app
 
 from . import init
+from . import state
 from .setup import setup_database
 from .service import run_service
 
@@ -10,8 +11,8 @@ from .service import run_service
 def cmd_setup():
     """Create or validate the configured database root."""
     init.init_system()
-    result = setup_database()
-    print(f"Subete database {result['status']}: {result['database-id']}")
+    status = setup_database()
+    print(f"Subete database {status}: {state.g['database-id']}")
 
 
 def cmd_not_specified():

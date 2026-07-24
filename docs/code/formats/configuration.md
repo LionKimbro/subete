@@ -32,7 +32,10 @@ subete-data/
 }
 ```
 
-All configuration fields other than `configuration-version` are optional unless required by a separately defined feature.
+Every field defined by the Version 1 configuration format is required in the
+durable record. Setup writes the complete initial configuration. An existing
+database with a missing or incomplete `configuration.json` is invalid and
+must fail loudly rather than silently substituting defaults.
 
 ## Fields
 
@@ -55,7 +58,7 @@ This is a format version, not the database generation or Subete software version
 ```json
 {
   "type": "object",
-  "required": false
+  "required": true
 }
 ```
 
@@ -66,7 +69,7 @@ Configuration for polling filesystem surfaces such as the FileTalk inbox.
 ```json
 {
   "type": "number",
-  "required": false,
+  "required": true,
   "minimum-exclusive": 0
 }
 ```
@@ -78,7 +81,7 @@ The approximate interval between inbox polling cycles.
 ```json
 {
   "type": "number",
-  "required": false,
+  "required": true,
   "minimum": 0
 }
 ```
@@ -90,7 +93,7 @@ How long an unreadable inbox file may remain unchanged before Subete may treat i
 ```json
 {
   "type": "string",
-  "required": false,
+  "required": true,
   "allowed-values": [
     "retain-and-report",
     "quarantine",
@@ -107,7 +110,7 @@ The action after the quiet period for a stale unreadable inbox file. `retain-and
 ```json
 {
   "type": "object",
-  "required": false
+  "required": true
 }
 ```
 
@@ -118,7 +121,7 @@ Configuration governing FileTalk delivery behavior.
 ```json
 {
   "type": "array",
-  "required": false,
+  "required": true,
   "items": {
     "type": "file-path"
   }
@@ -134,7 +137,9 @@ Each location must be an absolute directory path. Subete normalizes the configur
 * `configuration.json` contains one JSON object.
 * The filename is exactly `configuration.json`.
 * There is at most one `configuration.json` at the database root.
-* If the file is absent, Subete uses documented defaults. Under Version 1, it therefore has no allowed reply path and cannot accept a request family that requires a file reply.
+* Setup writes the complete Version 1 configuration record, including an empty
+  `allowed-reply-paths` list. An initialized database whose configuration file
+  is absent, malformed, or incomplete is invalid.
 * Unknown configuration fields must not be silently interpreted.
 * Configuration changes do not themselves advance the database generation.
 * Configuration must not contain authoritative entity facts.

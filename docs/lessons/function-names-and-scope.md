@@ -44,12 +44,9 @@ This produces a useful contrast:
 def setup_database():
     _create_required_directories()
 
-    if path("identity").exists():
+    if state.g["database-id"]:
         validate_database()
-        return {
-            "status": "existing",
-            "database-id": read_json("identity")["database-id"],
-        }
+        return "existing"
 
     _reject_incomplete_root_metadata()
     ...
