@@ -2,7 +2,7 @@
 import time
 from .filetalk import claim_message, complete_request, deliver_reply, discover_messages, fail_request
 from .fsio import read_json_file
-from .paths import build_paths
+from .paths import g
 from .requests import execute_request
 from .setup import validate_existing_database
 from .recovery import recover_pending
@@ -21,10 +21,9 @@ def process_one(paths, now):
     return True
 
 def run_service():
-    dbroot = app.execroot.get_execroot()
-    paths = build_paths(dbroot); validate_existing_database(paths)
-    recover_pending(paths, read_json_file(paths["identity"])["database-id"])
+    validate_existing_database()
+    recover_pending(g, read_json_file(g["identity"])["database-id"])
     try:
         while True:
-            process_one(paths, time.time()); time.sleep(.1)
+            process_one(g, time.time()); time.sleep(.1)
     except KeyboardInterrupt: return

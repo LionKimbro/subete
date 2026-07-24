@@ -7,7 +7,6 @@ from subete.entities import (
     read_entity,
     write_entity,
 )
-from subete.paths import build_paths
 from subete.setup import setup_database
 
 
@@ -20,9 +19,9 @@ def test_entity_filename_encodes_tag_uri_and_round_trips():
     assert entity_id_from_filename(filename) == entity_id
 
 
-def test_entity_store_writes_reads_and_orders_entities(tmp_path):
-    paths = build_paths(tmp_path / "database")
-    setup_database(paths["root"])
+def test_entity_store_writes_reads_and_orders_entities(tmp_path, use_database):
+    paths = use_database(tmp_path / "database")
+    setup_database()
     alpha = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     beta = "tag:example.net,2026:entity/beta"
     write_entity(paths, beta, {"revision": 1, "aspects": {}})
@@ -33,9 +32,9 @@ def test_entity_store_writes_reads_and_orders_entities(tmp_path):
     assert read_entity(paths, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb") is None
 
 
-def test_entity_store_rejects_filename_record_mismatch(tmp_path):
-    paths = build_paths(tmp_path / "database")
-    setup_database(paths["root"])
+def test_entity_store_rejects_filename_record_mismatch(tmp_path, use_database):
+    paths = use_database(tmp_path / "database")
+    setup_database()
     entity_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     path = paths["entities"] / entity_filename(entity_id)
     path.write_text('{"entity":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","revision":1,"aspects":{}}', encoding="utf-8")
@@ -44,9 +43,9 @@ def test_entity_store_rejects_filename_record_mismatch(tmp_path):
         read_entity(paths, entity_id)
 
 
-def test_uppercase_uuid_is_canonicalized_at_storage_and_lookup(tmp_path):
-    paths = build_paths(tmp_path / "database")
-    setup_database(paths["root"])
+def test_uppercase_uuid_is_canonicalized_at_storage_and_lookup(tmp_path, use_database):
+    paths = use_database(tmp_path / "database")
+    setup_database()
     uppercase = "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
     canonical = uppercase.lower()
 
@@ -62,9 +61,9 @@ def test_entity_store_rejects_alternate_uuid_spellings(value):
         entity_filename(value)
 
 
-def test_entity_store_preserves_every_json_aspect_value_kind(tmp_path):
-    paths = build_paths(tmp_path / "database")
-    setup_database(paths["root"])
+def test_entity_store_preserves_every_json_aspect_value_kind(tmp_path, use_database):
+    paths = use_database(tmp_path / "database")
+    setup_database()
     entity_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     values = {"tag:example.net,2026:aspect/object": {}, "tag:example.net,2026:aspect/array": [], "tag:example.net,2026:aspect/string": "text", "tag:example.net,2026:aspect/number": 4.5, "tag:example.net,2026:aspect/bool": True, "tag:example.net,2026:aspect/null": None}
 

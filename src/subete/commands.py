@@ -2,12 +2,14 @@
 
 import lionscliapp as app
 
+from . import init
 from .setup import setup_database
 from .service import run_service
 
 
 def cmd_setup():
     """Create or validate the configured database root."""
+    init.init_system()
     result = setup_database()
     print(f"Subete database {result['status']}: {result['database-id']}")
 
@@ -17,6 +19,8 @@ def cmd_not_specified():
     print("This command is reserved; its Version 1 request protocol is not implemented yet.")
 
 def cmd_service():
+    """Run the authoritative service for the configured database root."""
+    init.init_system()
     run_service()
 
 

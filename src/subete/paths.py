@@ -1,26 +1,74 @@
-"""The fixed filesystem layout of one Subete database."""
+"""The fixed filesystem layout of the current Subete database."""
 
 from pathlib import Path
 
+import lionscliapp as app
 
-def build_paths(dbroot):
-    """Return the named paths belonging to *dbroot*."""
-    root = Path(dbroot).expanduser().resolve()
+
+g = {
+    "root": None,
+    "identity": None,
+    "configuration": None,
+    "generation": None,
+    "inbox": None,
+    "processing": None,
+    "claimed": None,
+    "completed": None,
+    "failed": None,
+    "entities": None,
+    "journal": None,
+    "journal_pending": None,
+    "journal_committed": None,
+    "checkpoints": None,
+    "snapshots": None,
+    "link_cache": None,
+    "status": None,
+    "tmp": None,
+}
+
+
+def init_paths():
+    """Install the filesystem facts for Lionscliapp's selected execution root."""
+    root = Path(app.execroot.get_execroot()).expanduser().resolve()
     journal = root / "journal"
     processing = root / "inbox-processing"
-    return {
-        "root": root, "identity": root / "identity.json", "configuration": root / "configuration.json",
-        "generation": root / "generation.json", "inbox": root / "inbox", "processing": processing,
-        "claimed": processing / "claimed", "completed": processing / "completed", "failed": processing / "failed",
-        "entities": root / "entities", "journal": journal, "journal_pending": journal / "pending",
-        "journal_committed": journal / "committed", "checkpoints": journal / "checkpoints",
-        "snapshots": root / "snapshots", "link_cache": root / "link-cache", "status": root / "status", "tmp": root / "tmp",
-    }
+
+    g["root"] = root
+    g["identity"] = root / "identity.json"
+    g["configuration"] = root / "configuration.json"
+    g["generation"] = root / "generation.json"
+    g["inbox"] = root / "inbox"
+    g["processing"] = processing
+    g["claimed"] = processing / "claimed"
+    g["completed"] = processing / "completed"
+    g["failed"] = processing / "failed"
+    g["entities"] = root / "entities"
+    g["journal"] = journal
+    g["journal_pending"] = journal / "pending"
+    g["journal_committed"] = journal / "committed"
+    g["checkpoints"] = journal / "checkpoints"
+    g["snapshots"] = root / "snapshots"
+    g["link_cache"] = root / "link-cache"
+    g["status"] = root / "status"
+    g["tmp"] = root / "tmp"
 
 
-def required_directories(paths):
-    """Return the directories setup must create for a database."""
-    return [paths[key] for key in (
-        "root", "inbox", "processing", "claimed", "completed", "failed", "entities", "journal",
-        "journal_pending", "journal_committed", "checkpoints", "snapshots", "link_cache", "status", "tmp",
-    )]
+def required_directories():
+    """Return the directories setup must create for the current database."""
+    return [
+        g["root"],
+        g["inbox"],
+        g["processing"],
+        g["claimed"],
+        g["completed"],
+        g["failed"],
+        g["entities"],
+        g["journal"],
+        g["journal_pending"],
+        g["journal_committed"],
+        g["checkpoints"],
+        g["snapshots"],
+        g["link_cache"],
+        g["status"],
+        g["tmp"],
+    ]

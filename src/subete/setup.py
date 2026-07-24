@@ -5,29 +5,59 @@ from uuid import uuid4
 
 from .constants import GENERATION_FORMAT_VERSION, INITIAL_CONFIGURATION
 from .fsio import read_json_file, write_json_replace
-from .paths import build_paths, required_directories
+from .paths import g, required_directories
 from .validation import validate_configuration, validate_generation, validate_identity
 
 
 def setup_database():
     """Create a new database or validate the existing generation-zero foundation."""
-    dbroot = app.execroot.get_execroot()
-    
-    paths = build_paths(dbroot)
-    for directory in required_directories(paths):
+    create_required_directories()
+
+    if g["identity"].exists():
+        validate_existing_database()
+        return existing_database_result()
+
+    reject_partial_metadata()
+
+    identity = create_identity()
+    write_initial_configuration()
+    write_generation_zero(identity)
+
+    return {
+        "status": "created",
+        "database-id": identity["database-id"],
+    }
+
+
+def create_required_directories():
+    """Create the complete directory layout for the current database."""
+    for directory in required_directories():
         directory.mkdir(parents=True, exist_ok=True)
-    
-    if paths["identity"].exists():
-        validate_existing_database(paths)
-        return {"status": "existing",
-                "database-id": read_json_file(paths["identity"])["database-id"]}
-    
-    if paths["configuration"].exists() or paths["generation"].exists():
+
+
+def reject_partial_metadata():
+    """Reject a root whose metadata cannot describe a valid database."""
+    if g["configuration"].exists() or g["generation"].exists():
         raise ValueError("database root has metadata but no identity.json; refusing to initialize")
-    
-    identity = {"database-id": str(uuid4()),
-                "created": utc_now()}
-    
+
+
+def create_identity():
+    """Write and return the identity record for a new database."""
+    identity = {
+        "database-id": str(uuid4()),
+        "created": utc_now(),
+    }
+    write_json_replace(g["identity"], identity)
+    return identity
+
+
+def write_initial_configuration():
+    """Write the fixed generation-zero configuration record."""
+    write_json_replace(g["configuration"], INITIAL_CONFIGURATION)
+
+
+def write_generation_zero(identity):
+    """Write the first generation record for a new database."""
     generation = {
         "generation-format-version": GENERATION_FORMAT_VERSION,
         "database-id": identity["database-id"],
@@ -35,23 +65,28 @@ def setup_database():
         "journal-sequence": 0,
         "updated": utc_now(),
     }
-    
-    write_json_replace(paths["identity"], identity)
-    write_json_replace(paths["configuration"], INITIAL_CONFIGURATION)
-    write_json_replace(paths["generation"], generation)
-    
-    return {"status": "created",
-            "database-id": identity["database-id"]}
+    write_json_replace(g["generation"], generation)
 
 
-def validate_existing_database(paths):
-    """Validate the core records required before a service can use *paths*."""
+def existing_database_result():
+    """Return setup's result for the validated existing database."""
+    identity = read_json_file(g["identity"])
+    return {
+        "status": "existing",
+        "database-id": identity["database-id"],
+    }
+
+
+def validate_existing_database():
+    """Validate the core records required before this process can use the database."""
     for key in ("identity", "configuration", "generation"):
-        if not paths[key].is_file():
-            raise ValueError(f"existing database is missing {paths[key].name}")
-    identity = read_json_file(paths["identity"])
-    configuration = read_json_file(paths["configuration"])
-    generation = read_json_file(paths["generation"])
+        if not g[key].is_file():
+            raise ValueError(f"existing database is missing {g[key].name}")
+
+    identity = read_json_file(g["identity"])
+    configuration = read_json_file(g["configuration"])
+    generation = read_json_file(g["generation"])
+
     validate_identity(identity)
     validate_configuration(configuration)
     validate_generation(generation, identity["database-id"])
