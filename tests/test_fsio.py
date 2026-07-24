@@ -124,3 +124,21 @@ def test_write_json_does_not_create_a_temporary_file_outside_the_database_root(t
     write_json(external_file, {"kind": "reply"})
 
     assert json.loads(external_file.read_text(encoding="utf-8")) == {"kind": "reply"}
+
+
+def test_failed_database_replacement_preserves_the_old_file_and_removes_its_temporary_file(tmp_path, use_database, monkeypatch):
+    use_database(tmp_path / "database")
+    destination = path("configuration")
+    destination.parent.mkdir()
+    destination.write_text('{"kind": "old"}\n', encoding="utf-8")
+
+    def reject_replace(source, target):
+        raise OSError("replacement failed")
+
+    monkeypatch.setattr(fsio.os, "replace", reject_replace)
+
+    with pytest.raises(OSError, match="replacement failed"):
+        write_json(destination, {"kind": "new"})
+
+    assert json.loads(destination.read_text(encoding="utf-8")) == {"kind": "old"}
+    assert list(destination.parent.glob(f".{destination.name}.*.tmp")) == []

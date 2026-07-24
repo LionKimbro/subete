@@ -10,6 +10,12 @@ def plan_transaction(operations):
         validate_operation(operation)
         entity = validate_entity_id(operation["entity"])
         operation["entity"] = entity
+
+        if operation["operation"] == "create-entity" and "aspects" in operation:
+            operation["aspects"] = normalize_aspects(operation["aspects"])
+        if operation["operation"] in {"set-aspect", "delete-aspect"}:
+            operation["aspect"] = validate_entity_id(operation["aspect"])
+
         targets.setdefault(entity, []).append((index, operation))
     transitions = {}
     for entity, group in targets.items():

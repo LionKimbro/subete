@@ -4,10 +4,17 @@ from pathlib import Path
 import re
 from uuid import UUID
 
-from .entities import delete_entity, read_entity, write_entity
+from .entities import (
+    delete_entity,
+    normalize_aspects,
+    read_entity,
+    validate_entity_state,
+    write_entity,
+)
 from . import fsio
 from .fsio import write_json
 from .generation import read_generation
+from .identifiers import normalize_entity_id
 from .paths import path
 from .setup import utc_now
 
@@ -83,7 +90,46 @@ def read_validated_journal_entry(journal_file):
     if entry.get("request-id") != filename_facts["request-id"]:
         raise ValueError("journal filename request ID does not match its entry")
 
+    _validate_journal_entity_transitions(entry)
+
     return entry
+
+
+def _validate_journal_entity_transitions(entry):
+    transitions = entry.get("entities")
+    if not isinstance(transitions, dict):
+        raise ValueError("journal entry entities must be an object")
+
+    canonical_entity_ids = set()
+
+    for entity_id, transition in transitions.items():
+        canonical_entity_id = normalize_entity_id(entity_id)
+        if entity_id != canonical_entity_id:
+            raise ValueError("journal entry entity IDs must use canonical lowercase UUID form")
+        if canonical_entity_id in canonical_entity_ids:
+            raise ValueError("journal entry contains duplicate canonical entity IDs")
+
+        canonical_entity_ids.add(canonical_entity_id)
+        _validate_journal_entity_transition(transition)
+
+
+def _validate_journal_entity_transition(transition):
+    if not isinstance(transition, dict):
+        raise ValueError("journal entity transition must be an object")
+    if "before" not in transition or "after" not in transition:
+        raise ValueError("journal entity transition must contain before and after states")
+
+    _validate_journal_entity_state(transition["before"])
+    _validate_journal_entity_state(transition["after"])
+
+
+def _validate_journal_entity_state(state):
+    if state is None:
+        return
+
+    validate_entity_state(state)
+    if normalize_aspects(state["aspects"]) != state["aspects"]:
+        raise ValueError("journal aspect IDs must use canonical lowercase UUID form")
 
 
 def _validate_journal_sequence(sequence):
