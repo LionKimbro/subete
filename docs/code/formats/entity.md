@@ -17,7 +17,7 @@ Each entity file is named from its entity ID:
 <encoded-entity-id>.json
 ```
 
-UUID entity IDs remain unchanged:
+UUID entity IDs use their canonical lowercase hyphenated form:
 
 ```text
 209ee0b8-36d5-4a47-81ca-c59f0eaac29d.json
@@ -29,6 +29,9 @@ Entity IDs containing characters unsafe for filenames are encoded using UTF-8 pe
 tag%3Am1lattice.net%2C2026%3Aexample.json
 ```
 
+Tag URIs use RFC 4151 form `tag:<authority>,<date>:<specific>`; the
+`<specific>` component does not begin with `/`.
+
 The entity ID inside the file is authoritative. The filename is its filesystem representation.
 
 ## Format
@@ -38,7 +41,7 @@ The entity ID inside the file is authoritative. The filename is its filesystem r
   "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
   "revision": 12,
   "aspects": {
-    "tag:m1lattice.net,2026/aspect/basic": {
+    "tag:m1lattice.net,2026:aspect/basic": {
       "typehint": "person",
       "name": "lion",
       "title": "Lion Kimbro",
@@ -47,7 +50,7 @@ The entity ID inside the file is authoritative. The filename is its filesystem r
         "writer"
       ]
     },
-    "tag:example.net,2026/aspect/contact": {
+    "tag:example.net,2026:aspect/contact": {
       "email": "lion@example.net"
     }
   }
@@ -102,8 +105,8 @@ An existing entity may have an empty `aspects` object.
 
 * Each file contains one JSON object.
 * Each entity has at most one authoritative entity file in `entities/`.
-* Aspect values are stored wholesale.
-* Aspect IDs are JSON object keys and are compared exactly.
+* Aspect values are stored wholesale and may be any valid JSON value, including `null`.
+* UUID entity and aspect IDs are canonical lowercase hyphenated strings. Tag URI IDs are preserved and compared exactly.
 * Removing the final aspect does not remove the entity file.
 * Deleting the entity removes its entity file.
 * Entity files contain committed state only.

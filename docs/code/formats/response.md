@@ -82,7 +82,7 @@ Each file contains one complete JSON response object.
         "status": "found",
         "revision": 13,
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "title": "Lion Kimbro"
           }
         }

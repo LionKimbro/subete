@@ -51,7 +51,7 @@ Each file contains one complete JSON read request object.
       {
         "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
         "aspects": [
-          "tag:m1lattice.net,2026/aspect/basic"
+          "tag:m1lattice.net,2026:aspect/basic"
         ]
       },
       {

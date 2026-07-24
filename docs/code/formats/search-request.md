@@ -51,7 +51,7 @@ Each file contains one complete JSON search request object.
       {
         "typehint": "person",
         "has-aspects": [
-          "tag:example.net,2026/aspect/contact"
+          "tag:example.net,2026:aspect/contact"
         ],
         "tags": [
           "friend",

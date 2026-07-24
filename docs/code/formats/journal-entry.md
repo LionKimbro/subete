@@ -65,7 +65,7 @@ Example:
           "operation": "set-aspect",
           "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
           "expected-revision": 12,
-          "aspect": "tag:m1lattice.net,2026/aspect/basic",
+          "aspect": "tag:m1lattice.net,2026:aspect/basic",
           "value": {
             "title": "Updated Title"
           }
@@ -78,7 +78,7 @@ Example:
       "before": {
         "revision": 12,
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "title": "Original Title"
           }
         }
@@ -86,7 +86,7 @@ Example:
       "after": {
         "revision": 13,
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "title": "Updated Title"
           }
         }
@@ -245,7 +245,7 @@ Creation is represented with a null before-state:
   "after": {
     "revision": 1,
     "aspects": {
-      "tag:m1lattice.net,2026/aspect/basic": {
+      "tag:m1lattice.net,2026:aspect/basic": {
         "title": "New Entity"
       }
     }
@@ -262,7 +262,7 @@ Deletion is represented with a null after-state:
   "before": {
     "revision": 8,
     "aspects": {
-      "tag:m1lattice.net,2026/aspect/basic": {
+      "tag:m1lattice.net,2026:aspect/basic": {
         "title": "Obsolete Entity"
       }
     }

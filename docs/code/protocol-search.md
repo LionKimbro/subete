@@ -99,7 +99,7 @@ A search specification is an object containing one or more predicates.
 {
   "typehint": "person",
   "has-aspects": [
-    "tag:example.net,2026/aspect/contact"
+    "tag:example.net,2026:aspect/contact"
   ],
   "tags": [
     "friend",
@@ -145,7 +145,7 @@ For example:
     "seattle"
   ],
   "has-aspects": [
-    "tag:example.net,2026/aspect/contact"
+    "tag:example.net,2026:aspect/contact"
   ]
 }
 ```
@@ -188,7 +188,7 @@ These are two independent searches, not one combined search.
 The predicates `typehint`, `tags`, `name-contains`, and `title-contains` inspect the conventional M1 basic aspect:
 
 ```text
-tag:m1lattice.net,2026/aspect/basic
+tag:m1lattice.net,2026:aspect/basic
 ```
 
 An entity lacking the basic aspect does not match a predicate that requires a field from that aspect.
@@ -246,8 +246,8 @@ Matches entities containing all specified aspects.
 ```json
 {
   "has-aspects": [
-    "tag:example.net,2026/aspect/contact",
-    "tag:example.net,2026/aspect/person"
+    "tag:example.net,2026:aspect/contact",
+    "tag:example.net,2026:aspect/person"
   ]
 }
 ```
@@ -435,7 +435,7 @@ A candidate entity matches a link endpoint predicate only when it contains a
 valid conventional M1 link aspect:
 
 ```text
-tag:m1lattice.net,2026/aspect/link
+tag:m1lattice.net,2026:aspect/link
 ```
 
 with valid `from` and `to` entity IDs.
@@ -534,7 +534,7 @@ The caller may read returned link entities through the ordinary read protocol.
       {
         "typehint": "person",
         "has-aspects": [
-          "tag:example.net,2026/aspect/contact"
+          "tag:example.net,2026:aspect/contact"
         ],
         "tags": [
           "friend",
@@ -572,7 +572,7 @@ An entity matches only if every supplied predicate matches.
       },
       {
         "has-aspects": [
-          "tag:example.net,2026/aspect/project"
+          "tag:example.net,2026:aspect/project"
         ],
         "title-contains": "subete"
       },

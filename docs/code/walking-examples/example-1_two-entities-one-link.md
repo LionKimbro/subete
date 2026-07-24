@@ -131,7 +131,7 @@ The filename has no protocol meaning.
         "operation": "create-entity",
         "entity": "11111111-1111-4111-8111-111111111111",
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "person",
             "name": "alice",
             "title": "Alice",
@@ -146,7 +146,7 @@ The filename has no protocol meaning.
         "operation": "create-entity",
         "entity": "22222222-2222-4222-8222-222222222222",
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "project",
             "name": "moon-garden",
             "title": "Moon Garden",
@@ -161,7 +161,7 @@ The filename has no protocol meaning.
         "operation": "create-entity",
         "entity": "33333333-3333-4333-8333-333333333333",
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "link",
             "name": "alice-participates-in-moon-garden",
             "title": "Alice participates in Moon Garden",
@@ -171,7 +171,7 @@ The filename has no protocol meaning.
               "moon-garden"
             ]
           },
-          "tag:m1lattice.net,2026/aspect/link": {
+          "tag:m1lattice.net,2026:aspect/link": {
             "from": "11111111-1111-4111-8111-111111111111",
             "to": "22222222-2222-4222-8222-222222222222",
             "relationship": "participates-in"
@@ -239,7 +239,7 @@ Subete then plans three entity transitions.
   "after": {
     "revision": 1,
     "aspects": {
-      "tag:m1lattice.net,2026/aspect/basic": {
+      "tag:m1lattice.net,2026:aspect/basic": {
         "typehint": "person",
         "name": "alice",
         "title": "Alice",
@@ -261,7 +261,7 @@ Subete then plans three entity transitions.
   "after": {
     "revision": 1,
     "aspects": {
-      "tag:m1lattice.net,2026/aspect/basic": {
+      "tag:m1lattice.net,2026:aspect/basic": {
         "typehint": "project",
         "name": "moon-garden",
         "title": "Moon Garden",
@@ -283,7 +283,7 @@ Subete then plans three entity transitions.
   "after": {
     "revision": 1,
     "aspects": {
-      "tag:m1lattice.net,2026/aspect/basic": {
+      "tag:m1lattice.net,2026:aspect/basic": {
         "typehint": "link",
         "name": "alice-participates-in-moon-garden",
         "title": "Alice participates in Moon Garden",
@@ -293,7 +293,7 @@ Subete then plans three entity transitions.
           "moon-garden"
         ]
       },
-      "tag:m1lattice.net,2026/aspect/link": {
+      "tag:m1lattice.net,2026:aspect/link": {
         "from": "11111111-1111-4111-8111-111111111111",
         "to": "22222222-2222-4222-8222-222222222222",
         "relationship": "participates-in"
@@ -359,7 +359,7 @@ journal/pending/00000000000000000042__44444444-4444-4444-8444-444444444444.json
           "operation": "create-entity",
           "entity": "11111111-1111-4111-8111-111111111111",
           "aspects": {
-            "tag:m1lattice.net,2026/aspect/basic": {
+            "tag:m1lattice.net,2026:aspect/basic": {
               "typehint": "person",
               "name": "alice",
               "title": "Alice",
@@ -374,7 +374,7 @@ journal/pending/00000000000000000042__44444444-4444-4444-8444-444444444444.json
           "operation": "create-entity",
           "entity": "22222222-2222-4222-8222-222222222222",
           "aspects": {
-            "tag:m1lattice.net,2026/aspect/basic": {
+            "tag:m1lattice.net,2026:aspect/basic": {
               "typehint": "project",
               "name": "moon-garden",
               "title": "Moon Garden",
@@ -389,7 +389,7 @@ journal/pending/00000000000000000042__44444444-4444-4444-8444-444444444444.json
           "operation": "create-entity",
           "entity": "33333333-3333-4333-8333-333333333333",
           "aspects": {
-            "tag:m1lattice.net,2026/aspect/basic": {
+            "tag:m1lattice.net,2026:aspect/basic": {
               "typehint": "link",
               "name": "alice-participates-in-moon-garden",
               "title": "Alice participates in Moon Garden",
@@ -399,7 +399,7 @@ journal/pending/00000000000000000042__44444444-4444-4444-8444-444444444444.json
                 "moon-garden"
               ]
             },
-            "tag:m1lattice.net,2026/aspect/link": {
+            "tag:m1lattice.net,2026:aspect/link": {
               "from": "11111111-1111-4111-8111-111111111111",
               "to": "22222222-2222-4222-8222-222222222222",
               "relationship": "participates-in"
@@ -415,7 +415,7 @@ journal/pending/00000000000000000042__44444444-4444-4444-8444-444444444444.json
       "after": {
         "revision": 1,
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "person",
             "name": "alice",
             "title": "Alice",
@@ -432,7 +432,7 @@ journal/pending/00000000000000000042__44444444-4444-4444-8444-444444444444.json
       "after": {
         "revision": 1,
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "project",
             "name": "moon-garden",
             "title": "Moon Garden",
@@ -449,7 +449,7 @@ journal/pending/00000000000000000042__44444444-4444-4444-8444-444444444444.json
       "after": {
         "revision": 1,
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "link",
             "name": "alice-participates-in-moon-garden",
             "title": "Alice participates in Moon Garden",
@@ -459,7 +459,7 @@ journal/pending/00000000000000000042__44444444-4444-4444-8444-444444444444.json
               "moon-garden"
             ]
           },
-          "tag:m1lattice.net,2026/aspect/link": {
+          "tag:m1lattice.net,2026:aspect/link": {
             "from": "11111111-1111-4111-8111-111111111111",
             "to": "22222222-2222-4222-8222-222222222222",
             "relationship": "participates-in"
@@ -534,7 +534,7 @@ entities/11111111-1111-4111-8111-111111111111.json
   "entity": "11111111-1111-4111-8111-111111111111",
   "revision": 1,
   "aspects": {
-    "tag:m1lattice.net,2026/aspect/basic": {
+    "tag:m1lattice.net,2026:aspect/basic": {
       "typehint": "person",
       "name": "alice",
       "title": "Alice",
@@ -562,7 +562,7 @@ entities/22222222-2222-4222-8222-222222222222.json
   "entity": "22222222-2222-4222-8222-222222222222",
   "revision": 1,
   "aspects": {
-    "tag:m1lattice.net,2026/aspect/basic": {
+    "tag:m1lattice.net,2026:aspect/basic": {
       "typehint": "project",
       "name": "moon-garden",
       "title": "Moon Garden",
@@ -590,7 +590,7 @@ entities/33333333-3333-4333-8333-333333333333.json
   "entity": "33333333-3333-4333-8333-333333333333",
   "revision": 1,
   "aspects": {
-    "tag:m1lattice.net,2026/aspect/basic": {
+    "tag:m1lattice.net,2026:aspect/basic": {
       "typehint": "link",
       "name": "alice-participates-in-moon-garden",
       "title": "Alice participates in Moon Garden",
@@ -600,7 +600,7 @@ entities/33333333-3333-4333-8333-333333333333.json
         "moon-garden"
       ]
     },
-    "tag:m1lattice.net,2026/aspect/link": {
+    "tag:m1lattice.net,2026:aspect/link": {
       "from": "11111111-1111-4111-8111-111111111111",
       "to": "22222222-2222-4222-8222-222222222222",
       "relationship": "participates-in"
@@ -888,7 +888,7 @@ inbox/read-alice-and-link.json
       {
         "entity": "33333333-3333-4333-8333-333333333333",
         "aspects": [
-          "tag:m1lattice.net,2026/aspect/link"
+          "tag:m1lattice.net,2026:aspect/link"
         ]
       }
     ]
@@ -913,7 +913,7 @@ Both reads observe the same committed generation.
         "status": "found",
         "revision": 1,
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "person",
             "name": "alice",
             "title": "Alice",
@@ -930,7 +930,7 @@ Both reads observe the same committed generation.
         "revision": 1,
         "aspects": [
           {
-            "aspect": "tag:m1lattice.net,2026/aspect/link",
+            "aspect": "tag:m1lattice.net,2026:aspect/link",
             "status": "found",
             "value": {
               "from": "11111111-1111-4111-8111-111111111111",
@@ -987,8 +987,8 @@ inbox/search-alice-participation-link.json
     "searches": [
       {
         "has-aspects": [
-          "tag:m1lattice.net,2026/aspect/basic",
-          "tag:m1lattice.net,2026/aspect/link"
+          "tag:m1lattice.net,2026:aspect/basic",
+          "tag:m1lattice.net,2026:aspect/link"
         ],
         "typehint": "link",
         "tags": [

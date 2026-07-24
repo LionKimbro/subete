@@ -52,7 +52,7 @@ Each file contains one complete JSON transaction request object.
         "operation": "set-aspect",
         "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
         "expected-revision": 12,
-        "aspect": "tag:m1lattice.net,2026/aspect/basic",
+        "aspect": "tag:m1lattice.net,2026:aspect/basic",
         "value": {
           "title": "Updated Title"
         }

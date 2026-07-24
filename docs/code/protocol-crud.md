@@ -46,7 +46,7 @@ A transaction request contains one or more mutation operations.
         "operation": "create-entity",
         "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "person",
             "name": "lion",
             "title": "Lion Kimbro"
@@ -135,7 +135,7 @@ For example, setting one aspect and deleting a different aspect on the same exis
       "operation": "set-aspect",
       "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
       "expected-revision": 12,
-      "aspect": "tag:m1lattice.net,2026/aspect/basic",
+      "aspect": "tag:m1lattice.net,2026:aspect/basic",
       "value": {
         "title": "Updated title"
       }
@@ -144,7 +144,7 @@ For example, setting one aspect and deleting a different aspect on the same exis
       "operation": "delete-aspect",
       "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
       "expected-revision": 12,
-      "aspect": "tag:example.net,2026/aspect/obsolete"
+      "aspect": "tag:example.net,2026:aspect/obsolete"
     }
   ]
 }
@@ -203,7 +203,7 @@ Creates a new entity.
   "operation": "create-entity",
   "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
   "aspects": {
-    "tag:m1lattice.net,2026/aspect/basic": {
+    "tag:m1lattice.net,2026:aspect/basic": {
       "typehint": "person",
       "title": "Lion Kimbro"
     }
@@ -273,7 +273,7 @@ Creates or replaces one complete aspect on an existing entity.
   "operation": "set-aspect",
   "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
   "expected-revision": 12,
-  "aspect": "tag:m1lattice.net,2026/aspect/basic",
+  "aspect": "tag:m1lattice.net,2026:aspect/basic",
   "value": {
     "typehint": "person",
     "title": "Lion Kimbro",
@@ -364,7 +364,7 @@ Removes one aspect from an existing entity.
   "operation": "delete-aspect",
   "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
   "expected-revision": 12,
-  "aspect": "tag:example.net,2026/aspect/obsolete"
+  "aspect": "tag:example.net,2026:aspect/obsolete"
 }
 ```
 
@@ -501,7 +501,7 @@ A missing entity is not a successful no-op because its required revision precond
         "operation": "create-entity",
         "entity": "0cb710b2-1686-4e02-904b-510a01ce245f",
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "person",
             "title": "Alice"
           }
@@ -511,7 +511,7 @@ A missing entity is not a successful no-op because its required revision precond
         "operation": "create-entity",
         "entity": "69091b6c-f087-45b4-9560-cbe90c127b8e",
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "project",
             "title": "Example Project"
           }
@@ -521,10 +521,10 @@ A missing entity is not a successful no-op because its required revision precond
         "operation": "create-entity",
         "entity": "12cc0636-a5cc-49cd-b133-b3a37fa94c9f",
         "aspects": {
-          "tag:m1lattice.net,2026/aspect/basic": {
+          "tag:m1lattice.net,2026:aspect/basic": {
             "typehint": "link"
           },
-          "tag:m1lattice.net,2026/aspect/link": {
+          "tag:m1lattice.net,2026:aspect/link": {
             "from": "0cb710b2-1686-4e02-904b-510a01ce245f",
             "to": "69091b6c-f087-45b4-9560-cbe90c127b8e",
             "typehint": "member-of"
@@ -557,7 +557,7 @@ A read request retrieves committed entity state without changing it.
       {
         "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
         "aspects": [
-          "tag:m1lattice.net,2026/aspect/basic"
+          "tag:m1lattice.net,2026:aspect/basic"
         ]
       }
     ]
@@ -601,8 +601,8 @@ A read request must not observe speculative transaction planning, partial journa
 {
   "entity": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d",
   "aspects": [
-    "tag:m1lattice.net,2026/aspect/basic",
-    "tag:example.net,2026/aspect/contact"
+    "tag:m1lattice.net,2026:aspect/basic",
+    "tag:example.net,2026:aspect/contact"
   ]
 }
 ```
@@ -675,8 +675,8 @@ The string `"*"` requests all authoritative current aspects on the entity.
       {
         "entity": "69091b6c-f087-45b4-9560-cbe90c127b8e",
         "aspects": [
-          "tag:m1lattice.net,2026/aspect/basic",
-          "tag:example.net,2026/aspect/project-status"
+          "tag:m1lattice.net,2026:aspect/basic",
+          "tag:example.net,2026:aspect/project-status"
         ]
       }
     ]
@@ -864,7 +864,7 @@ The reported generation is the unchanged committed database generation. No opera
         "revision": 12,
         "aspects": [
           {
-            "aspect": "tag:m1lattice.net,2026/aspect/basic",
+            "aspect": "tag:m1lattice.net,2026:aspect/basic",
             "status": "found",
             "value": {
               "typehint": "person",
@@ -872,7 +872,7 @@ The reported generation is the unchanged committed database generation. No opera
             }
           },
           {
-            "aspect": "tag:example.net,2026/aspect/contact",
+            "aspect": "tag:example.net,2026:aspect/contact",
             "status": "not-found"
           }
         ]
@@ -899,11 +899,11 @@ The reported generation is the unchanged committed database generation. No opera
   "status": "found",
   "revision": 12,
   "aspects": {
-    "tag:m1lattice.net,2026/aspect/basic": {
+    "tag:m1lattice.net,2026:aspect/basic": {
       "typehint": "person",
       "title": "Lion Kimbro"
     },
-    "tag:example.net,2026/aspect/contact": {
+    "tag:example.net,2026:aspect/contact": {
       "email": "lion@example.net"
     }
   }

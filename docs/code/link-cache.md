@@ -31,7 +31,7 @@ It does not contain authoritative relationship meaning beyond identifiers copied
 An entity is recognized as a link when it contains the link aspect:
 
 ```text
-tag:m1lattice.net,2026/aspect/link
+tag:m1lattice.net,2026:aspect/link
 ```
 
 A valid link aspect contains:
@@ -933,7 +933,7 @@ Given the authoritative link entity:
   "entity": "33333333-3333-4333-8333-333333333333",
   "revision": 1,
   "aspects": {
-    "tag:m1lattice.net,2026/aspect/link": {
+    "tag:m1lattice.net,2026:aspect/link": {
       "from": "11111111-1111-4111-8111-111111111111",
       "to": "22222222-2222-4222-8222-222222222222",
       "relationship": "participates-in"
