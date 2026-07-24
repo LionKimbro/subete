@@ -30,7 +30,7 @@ tag%3Am1lattice.net%2C2026%3Aexample.json
 ```
 
 Tag URIs use RFC 4151 form `tag:<authority>,<date>:<specific>`; the
-`<specific>` component does not begin with `/`.
+`<specific>` component may begin with `/`.
 
 The entity ID inside the file is authoritative. The filename is its filesystem representation.
 

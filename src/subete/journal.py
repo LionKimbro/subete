@@ -5,11 +5,9 @@ import re
 from uuid import UUID
 
 from .entities import (
-    delete_entity,
+    apply_entity_transitions,
     normalize_aspects,
-    read_entity,
     validate_entity_state,
-    write_entity,
 )
 from . import fsio
 from .fsio import write_json
@@ -59,12 +57,7 @@ def write_pending(database_id, request, transitions):
 
 def apply_pending(pending):
     entry = read_validated_journal_entry(pending)
-    for entity_id in sorted(entry["entities"]):
-        transition = entry["entities"][entity_id]; current = read_entity(entity_id)
-        if current == transition["after"]: continue
-        if current != transition["before"]: raise ValueError("journal-state-mismatch")
-        if transition["after"] is None: delete_entity(entity_id)
-        else: write_entity(entity_id, transition["after"])
+    apply_entity_transitions(entry["entities"])
     return entry
 
 def commit_pending(pending, database_id):

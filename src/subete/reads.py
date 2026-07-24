@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 
-from .entities import read_entity, validate_entity_id
+from .entities import read_aspects, read_entity, validate_entity_id
 
 
 def execute_reads(reads):
@@ -11,7 +11,10 @@ def execute_reads(reads):
     results = []
     for read in reads:
         entity_id = read["entity"]
-        entity = read_entity(entity_id)
+        if read["aspects"] == "*":
+            entity = read_entity(entity_id)
+        else:
+            entity = read_aspects(entity_id, read["aspects"])
         if entity is None:
             results.append({"entity": entity_id, "status": "not-found"})
             continue

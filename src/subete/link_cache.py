@@ -1,5 +1,5 @@
 """Rebuildable Version 1 link-cache helpers."""
-from .entities import entity_filename, list_entity_ids, read_entity
+from .entities import entity_filename, list_ids, read_entity
 from .fsio import write_json
 from .paths import path
 from .setup import utc_now
@@ -8,7 +8,7 @@ LINK_ASPECT = "tag:m1lattice.net,2026:aspect/link"
 
 def rebuild(database_id, generation):
     outgoing = {}; incoming = {}
-    for link_id in list_entity_ids():
+    for link_id in list_ids():
         entity = read_entity(link_id); link = entity["aspects"].get(LINK_ASPECT)
         if not isinstance(link, dict) or not isinstance(link.get("from"), str) or not isinstance(link.get("to"), str): continue
         outgoing.setdefault(link["from"], set()).add(link_id); incoming.setdefault(link["to"], set()).add(link_id)

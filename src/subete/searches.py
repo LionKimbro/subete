@@ -1,6 +1,6 @@
 """Version 1 full-scan search predicates."""
 
-from .entities import list_entity_ids, read_entity, validate_entity_id
+from .entities import list_ids, read_entity, validate_entity_id
 
 BASIC_ASPECT = "tag:m1lattice.net,2026:aspect/basic"
 PREDICATES = {"typehint", "has-aspects", "tags", "name-contains", "title-contains"}
@@ -9,7 +9,7 @@ PREDICATES = {"typehint", "has-aspects", "tags", "name-contains", "title-contain
 def execute_searches(searches):
     """Evaluate all validated searches by scanning authoritative entity files."""
     validate_searches(searches)
-    entity_ids = list_entity_ids()
+    entity_ids = list_ids()
     results = []
     for index, search in enumerate(searches):
         matches = [entity_id for entity_id in entity_ids if matches_search(read_entity(entity_id), search)]

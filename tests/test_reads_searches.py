@@ -1,6 +1,6 @@
 import pytest
 
-from subete.entities import write_entity
+from subete.entities import _write_complete_entity_state
 from subete.reads import execute_reads
 from subete.searches import BASIC_ASPECT, execute_searches
 from subete.setup import setup_database
@@ -9,7 +9,7 @@ from subete.setup import setup_database
 def test_reads_distinguish_found_entities_and_missing_aspects(tmp_path, use_database):
     prepared_paths(tmp_path, use_database)
     person = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-    write_entity(person, {"revision": 1, "aspects": {BASIC_ASPECT: {"title": "Alice"}}})
+    _write_complete_entity_state(person, {"revision": 1, "aspects": {BASIC_ASPECT: {"title": "Alice"}}})
 
     result = execute_reads([{"entity": person, "aspects": [BASIC_ASPECT, "tag:example.net,2026:aspect/missing"]}])
 
@@ -21,7 +21,7 @@ def test_searches_casefold_predicates_and_orders_ids(tmp_path, use_database):
     first = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     second = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
     for entity_id, name in ((second, "Bob"), (first, "ALICE")):
-        write_entity(entity_id, {"revision": 1, "aspects": {BASIC_ASPECT: {"typehint": "Person", "name": name, "tags": ["Seattle", "friend"]}}})
+        _write_complete_entity_state(entity_id, {"revision": 1, "aspects": {BASIC_ASPECT: {"typehint": "Person", "name": name, "tags": ["Seattle", "friend"]}}})
 
     result = execute_searches([{"typehint": "person", "tags": ["seattle"], "name-contains": "a"}])
 
