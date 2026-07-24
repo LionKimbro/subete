@@ -7,21 +7,21 @@ from .transactions import plan_transaction
 from .journal import apply_pending, commit_pending, write_pending
 from .link_cache import rebuild
 
-def execute_request(paths, database_id, message):
+def execute_request(database_id, message):
     validate_envelope(message)
-    generation = read_generation(paths, database_id)
+    generation = read_generation()
     if message["request-type"] == "transaction":
-        transitions = plan_transaction(paths, message["request"]["operations"])
-        pending = write_pending(paths, database_id, message, transitions)
-        entry = apply_pending(paths, pending)
-        rebuild(paths, database_id, entry["sequence"])
-        commit_pending(paths, pending, database_id)
+        transitions = plan_transaction(message["request"]["operations"])
+        pending = write_pending(database_id, message, transitions)
+        entry = apply_pending(pending)
+        rebuild(database_id, entry["sequence"])
+        commit_pending(pending, database_id)
         response = {"journal-sequence": entry["sequence"], "entities": [{"entity": key, "revision": value["after"]["revision"]} for key, value in transitions.items() if value["after"] is not None]}
         generation = entry["sequence"]
     elif message["request-type"] == "read":
-        response = {"reads": execute_reads(paths, message["request"]["reads"])}
+        response = {"reads": execute_reads(message["request"]["reads"])}
     else:
-        response = {"searches": execute_searches(paths, message["request"]["searches"])}
+        response = {"searches": execute_searches(message["request"]["searches"])}
     return {"request-id": message["request-id"], "request-type": message["request-type"], "status": "success", "generation": generation, "response": response}
 
 def validate_envelope(message):

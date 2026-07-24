@@ -4,7 +4,8 @@ import json
 import shutil
 from pathlib import Path
 
-from .fsio import read_json_file, write_json_replace
+from .fsio import read_json, write_json
+from .paths import path
 
 g = {"observations": {}}
 
@@ -14,25 +15,25 @@ def reset():
     g["observations"].clear()
 
 
-def discover_messages(paths, now):
+def discover_messages(now):
     """Return stable complete JSON-object inbox files in deterministic order."""
     messages = []
-    for path in sorted(paths["inbox"].iterdir(), key=lambda item: item.name):
-        if not path.is_file():
+    for message_file in sorted(path("inbox").iterdir(), key=lambda item: item.name):
+        if not message_file.is_file():
             continue
-        outcome = read_message_file(path)
+        outcome = read_message_file(message_file)
         if outcome["state"] == "complete-object":
-            g["observations"].pop(path, None)
-            messages.append({"path": path, "message": outcome["value"]})
+            g["observations"].pop(message_file, None)
+            messages.append({"path": message_file, "message": outcome["value"]})
         else:
-            observe_unreadable(path, now)
+            observe_unreadable(message_file, now)
     return messages
 
 
 def read_message_file(path):
     """Classify a candidate without treating incomplete JSON as bad input."""
     try:
-        value = read_json_file(path)
+        value = read_json(path)
     except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError):
         return {"state": "unreadable"}
     if not isinstance(value, dict):
@@ -53,14 +54,14 @@ def observe_unreadable(path, now):
     return current
 
 
-def stale_unreadable(paths, now, quiet_seconds):
+def stale_unreadable(now, quiet_seconds):
     """Return unreadable candidates unchanged for at least the quiet period."""
     return [path for path, fact in g["observations"].items() if path.exists() and now - fact["last-change"] >= quiet_seconds]
 
 
-def claim_message(paths, source):
+def claim_message(source):
     """Move one complete inbox file to claimed storage without overwriting."""
-    destination = paths["claimed"] / source.name
+    destination = path("claimed") / source.name
     if destination.exists():
         if source.exists() and source.read_bytes() == destination.read_bytes():
             source.unlink()
@@ -70,7 +71,7 @@ def claim_message(paths, source):
     return destination
 
 
-def validate_reply_destination(paths, configuration, reply):
+def validate_reply_destination(configuration, reply):
     """Return a permitted absolute response path or reject it."""
     if not isinstance(reply, dict) or set(reply) != {"type", "path"} or reply["type"] != "file":
         raise ValueError("invalid-reply-destination")
@@ -81,7 +82,7 @@ def validate_reply_destination(paths, configuration, reply):
     if not destination.is_absolute():
         raise ValueError("invalid-reply-destination")
     parent = destination.parent.resolve()
-    root = paths["root"].resolve()
+    root = path("root").resolve()
     if is_beneath(parent, root):
         raise ValueError("invalid-reply-destination")
     allowed = configuration.get("filetalk", {}).get("allowed-reply-paths", [])
@@ -90,21 +91,21 @@ def validate_reply_destination(paths, configuration, reply):
     return parent / destination.name
 
 
-def deliver_reply(paths, configuration, reply, response):
+def deliver_reply(configuration, reply, response):
     """Write one response at a validated FileTalk destination."""
-    destination = validate_reply_destination(paths, configuration, reply)
-    write_json_replace(destination, response)
+    destination = validate_reply_destination(configuration, reply)
+    write_json(destination, response)
     return destination
 
 
-def complete_request(paths, claimed, record):
+def complete_request(claimed, record):
     """Place a completed request record under its terminal directory."""
-    return move_terminal(paths["completed"], claimed, record)
+    return move_terminal(path("completed"), claimed, record)
 
 
-def fail_request(paths, claimed, record):
+def fail_request(claimed, record):
     """Place a failed request record under its terminal directory."""
-    return move_terminal(paths["failed"], claimed, record)
+    return move_terminal(path("failed"), claimed, record)
 
 
 def move_terminal(directory, claimed, record):
@@ -114,7 +115,7 @@ def move_terminal(directory, claimed, record):
         raise ValueError("terminal request collision")
     destination.mkdir()
     shutil.move(str(claimed), str(destination / "request.json"))
-    write_json_replace(destination / "record.json", record)
+    write_json(destination / "record.json", record)
     return destination
 
 

@@ -2,27 +2,48 @@ import json
 
 import pytest
 
-from subete.paths import required_directories
+from subete import init
+from subete.paths import path, paths, required_directories
 from subete.setup import setup_database
+from subete.state import g
 
 
 def test_setup_creates_complete_generation_zero_database(tmp_path, use_database):
     dbroot = tmp_path / "database"
 
-    paths = use_database(dbroot)
+    use_database(dbroot)
     result = setup_database()
 
     assert result["status"] == "created"
     assert all(path.is_dir() for path in required_directories())
-    identity = load(paths["identity"])
-    configuration = load(paths["configuration"])
-    generation = load(paths["generation"])
+    identity = load(path("identity"))
+    configuration = load(path("configuration"))
+    generation = load(path("generation"))
     assert identity["database-id"] == result["database-id"]
+    assert g["database-id"] == result["database-id"]
     assert configuration["configuration-version"] == 1
     assert configuration["filetalk"]["allowed-reply-paths"] == []
     assert generation["database-id"] == result["database-id"]
     assert generation["generation"] == 0
     assert generation["journal-sequence"] == 0
+
+
+def test_path_declarations_describe_the_current_database_territory(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+
+    use_database(dbroot)
+
+    assert paths["root"] == {
+        "path": dbroot.resolve(),
+        "kind": "directory",
+        "required": True,
+    }
+    assert paths["identity"] == {
+        "path": dbroot / "identity.json",
+        "kind": "file",
+        "required": True,
+    }
+    assert path("entities") == dbroot / "entities"
 
 
 def test_setup_validates_instead_of_replacing_existing_identity(tmp_path, use_database):
@@ -33,6 +54,17 @@ def test_setup_validates_instead_of_replacing_existing_identity(tmp_path, use_da
     second = setup_database()
 
     assert second == {"status": "existing", "database-id": first["database-id"]}
+
+
+def test_system_initialization_loads_an_existing_database_id(tmp_path, use_database):
+    dbroot = tmp_path / "database"
+    use_database(dbroot)
+    created = setup_database()
+
+    g["database-id"] = None
+    init.init_system()
+
+    assert g["database-id"] == created["database-id"]
 
 
 def test_setup_refuses_partial_root_metadata(tmp_path, use_database):

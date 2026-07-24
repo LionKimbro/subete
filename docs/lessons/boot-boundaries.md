@@ -31,11 +31,15 @@ root, recreate the path layout, or pass the same context from function
 to function.
 
 For Subete, `init.init_system()` is that boundary.  It runs after
-Lionscliapp has resolved `--execroot`.  Today it calls
-`paths.init_paths()`, which fills `subete.paths.g` with the root,
-metadata paths, inbox paths, journal paths, and other fixed facts of
-the current database.  Later, it can establish other process-wide
-database facts without making the paths module responsible for them.
+Lionscliapp has resolved `--execroot`.  It calls `paths.init_paths()`,
+which fills `subete.paths.paths` with the root, metadata paths, inbox
+paths, journal paths, and other fixed facts of the current database.
+It then calls `state.load_existing_database_id()`, which installs the
+database ID in the live process state when an identity record is
+present.  Each declared territory also records whether it is a file or
+directory and whether setup must create it.  Later, `init_system()` can
+establish other process-wide database facts without making the paths
+module responsible for them.
 
 ```python
 def cmd_setup():

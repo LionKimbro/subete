@@ -6,7 +6,7 @@ import lionscliapp as app
 from lionscliapp.application import application
 
 from subete import commands
-from subete.paths import g
+from subete.paths import path
 from lionscliapp.paths import get_lock_path, get_project_root
 
 
@@ -18,7 +18,7 @@ def test_setup_locks_the_selected_execution_root(monkeypatch, tmp_path):
     observed = {}
 
     def fake_setup_database():
-        observed["root"] = g["root"]
+        observed["root"] = path("root")
         observed["project_root"] = get_project_root()
         observed["lock_path"] = get_lock_path()
         observed["lock_exists"] = get_lock_path().is_file()

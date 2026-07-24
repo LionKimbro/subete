@@ -1,7 +1,6 @@
 import pytest
 
 from subete import init
-from subete.paths import g
 
 
 @pytest.fixture
@@ -13,6 +12,5 @@ def use_database(monkeypatch):
             lambda: dbroot,
         )
         init.init_system()
-        return g
 
     return select

@@ -6,13 +6,13 @@ BASIC_ASPECT = "tag:m1lattice.net,2026:aspect/basic"
 PREDICATES = {"typehint", "has-aspects", "tags", "name-contains", "title-contains"}
 
 
-def execute_searches(paths, searches):
+def execute_searches(searches):
     """Evaluate all validated searches by scanning authoritative entity files."""
     validate_searches(searches)
-    entity_ids = list_entity_ids(paths)
+    entity_ids = list_entity_ids()
     results = []
     for index, search in enumerate(searches):
-        matches = [entity_id for entity_id in entity_ids if matches_search(read_entity(paths, entity_id), search)]
+        matches = [entity_id for entity_id in entity_ids if matches_search(read_entity(entity_id), search)]
         results.append({"index": index, "entities": matches})
     return results
 

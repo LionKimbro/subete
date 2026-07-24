@@ -5,13 +5,13 @@ from copy import deepcopy
 from .entities import read_entity, validate_entity_id
 
 
-def execute_reads(paths, reads):
+def execute_reads(reads):
     """Evaluate validated read specifications against the current entity files."""
     validate_reads(reads)
     results = []
     for read in reads:
         entity_id = read["entity"]
-        entity = read_entity(paths, entity_id)
+        entity = read_entity(entity_id)
         if entity is None:
             results.append({"entity": entity_id, "status": "not-found"})
             continue

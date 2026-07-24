@@ -7,6 +7,7 @@ from subete.entities import (
     read_entity,
     write_entity,
 )
+from subete.paths import path
 from subete.setup import setup_database
 
 
@@ -20,39 +21,39 @@ def test_entity_filename_encodes_tag_uri_and_round_trips():
 
 
 def test_entity_store_writes_reads_and_orders_entities(tmp_path, use_database):
-    paths = use_database(tmp_path / "database")
+    use_database(tmp_path / "database")
     setup_database()
     alpha = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     beta = "tag:example.net,2026:entity/beta"
-    write_entity(paths, beta, {"revision": 1, "aspects": {}})
-    write_entity(paths, alpha, {"revision": 2, "aspects": {"tag:example.net,2026:aspect/a": {"x": 1}}})
+    write_entity(beta, {"revision": 1, "aspects": {}})
+    write_entity(alpha, {"revision": 2, "aspects": {"tag:example.net,2026:aspect/a": {"x": 1}}})
 
-    assert read_entity(paths, alpha) == {"revision": 2, "aspects": {"tag:example.net,2026:aspect/a": {"x": 1}}}
-    assert list_entity_ids(paths) == [alpha, beta]
-    assert read_entity(paths, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb") is None
+    assert read_entity(alpha) == {"revision": 2, "aspects": {"tag:example.net,2026:aspect/a": {"x": 1}}}
+    assert list_entity_ids() == [alpha, beta]
+    assert read_entity("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb") is None
 
 
 def test_entity_store_rejects_filename_record_mismatch(tmp_path, use_database):
-    paths = use_database(tmp_path / "database")
+    use_database(tmp_path / "database")
     setup_database()
     entity_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-    path = paths["entities"] / entity_filename(entity_id)
-    path.write_text('{"entity":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","revision":1,"aspects":{}}', encoding="utf-8")
+    entity_file = path("entities") / entity_filename(entity_id)
+    entity_file.write_text('{"entity":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","revision":1,"aspects":{}}', encoding="utf-8")
 
     with pytest.raises(ValueError, match="does not match"):
-        read_entity(paths, entity_id)
+        read_entity(entity_id)
 
 
 def test_uppercase_uuid_is_canonicalized_at_storage_and_lookup(tmp_path, use_database):
-    paths = use_database(tmp_path / "database")
+    use_database(tmp_path / "database")
     setup_database()
     uppercase = "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
     canonical = uppercase.lower()
 
-    write_entity(paths, uppercase, {"revision": 1, "aspects": {"BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB": None}})
+    write_entity(uppercase, {"revision": 1, "aspects": {"BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB": None}})
 
-    assert (paths["entities"] / f"{canonical}.json").is_file()
-    assert read_entity(paths, uppercase) == {"revision": 1, "aspects": {"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb": None}}
+    assert (path("entities") / f"{canonical}.json").is_file()
+    assert read_entity(uppercase) == {"revision": 1, "aspects": {"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb": None}}
 
 
 @pytest.mark.parametrize("value", ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "{aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa}", "urn:uuid:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"])
@@ -62,11 +63,11 @@ def test_entity_store_rejects_alternate_uuid_spellings(value):
 
 
 def test_entity_store_preserves_every_json_aspect_value_kind(tmp_path, use_database):
-    paths = use_database(tmp_path / "database")
+    use_database(tmp_path / "database")
     setup_database()
     entity_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     values = {"tag:example.net,2026:aspect/object": {}, "tag:example.net,2026:aspect/array": [], "tag:example.net,2026:aspect/string": "text", "tag:example.net,2026:aspect/number": 4.5, "tag:example.net,2026:aspect/bool": True, "tag:example.net,2026:aspect/null": None}
 
-    write_entity(paths, entity_id, {"revision": 1, "aspects": values})
+    write_entity(entity_id, {"revision": 1, "aspects": values})
 
-    assert read_entity(paths, entity_id)["aspects"] == values
+    assert read_entity(entity_id)["aspects"] == values

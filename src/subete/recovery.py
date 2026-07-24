@@ -1,14 +1,15 @@
 """Startup reconciliation of pending journal obligations."""
-from .fsio import read_json_file
+from .fsio import read_json
 from .journal import apply_pending, commit_pending
+from .paths import path
 
-def recover_pending(paths, database_id):
+def recover_pending(database_id):
     """Complete pending journals in ascending sequence order."""
     recovered = []
-    for pending in sorted(paths["journal_pending"].glob("*.json")):
-        entry = read_json_file(pending)
+    for pending in sorted(path("journal_pending").glob("*.json")):
+        entry = read_json(pending)
         if entry.get("database-id") != database_id: raise ValueError("journal-database-mismatch")
-        apply_pending(paths, pending)
-        commit_pending(paths, pending, database_id)
+        apply_pending(pending)
+        commit_pending(pending, database_id)
         recovered.append(entry["sequence"])
     return recovered

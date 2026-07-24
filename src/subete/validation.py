@@ -3,25 +3,33 @@
 from uuid import UUID
 
 from .constants import CONFIGURATION_VERSION, GENERATION_FORMAT_VERSION
+from .fsio import read_json
 
 
-def validate_identity(data):
+def validate_database_identity():
+    """Validate the fixed identity record of the current database."""
+    data = read_json("identity", ["verify-file"])
     _require_object(data, "identity.json")
     _require_uuid(data, "database-id")
     if not isinstance(data.get("created"), str):
         raise ValueError("identity.json created must be a timestamp string")
 
 
-def validate_configuration(data):
+def validate_database_configuration():
+    """Validate the fixed configuration record of the current database."""
+    data = read_json("configuration", ["verify-file"])
     _require_object(data, "configuration.json")
     _require_exact_int(data, "configuration-version", CONFIGURATION_VERSION)
 
 
-def validate_generation(data, database_id):
+def validate_database_generation():
+    """Validate the fixed generation record of the current database."""
+    identity = read_json("identity", ["verify-file"])
+    data = read_json("generation", ["verify-file"])
     _require_object(data, "generation.json")
     _require_exact_int(data, "generation-format-version", GENERATION_FORMAT_VERSION)
     _require_uuid(data, "database-id")
-    if data["database-id"] != database_id:
+    if data["database-id"] != identity["database-id"]:
         raise ValueError("generation.json database-id does not match identity.json")
     generation = data.get("generation")
     sequence = data.get("journal-sequence")

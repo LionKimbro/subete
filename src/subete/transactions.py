@@ -2,7 +2,7 @@
 from copy import deepcopy
 from .entities import read_entity, validate_entity_id, normalize_aspects
 
-def plan_transaction(paths, operations):
+def plan_transaction(operations):
     """Return complete logical entity transitions without mutating storage."""
     if not isinstance(operations, list) or not operations: raise ValueError("operations must be a nonempty array")
     targets = {}
@@ -13,7 +13,7 @@ def plan_transaction(paths, operations):
         targets.setdefault(entity, []).append((index, operation))
     transitions = {}
     for entity, group in targets.items():
-        before = read_entity(paths, entity)
+        before = read_entity(entity)
         after = plan_entity(before, group)
         transitions[entity] = {"before": before, "after": after}
     return transitions

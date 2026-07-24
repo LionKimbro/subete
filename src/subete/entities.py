@@ -3,8 +3,9 @@
 from copy import deepcopy
 from pathlib import Path
 from urllib.parse import quote, unquote
-from .fsio import read_json_file, write_json_replace
+from .fsio import read_json, write_json
 from .identifiers import normalize_entity_id
+from .paths import path
 
 
 def entity_filename(entity_id):
@@ -25,46 +26,46 @@ def entity_id_from_filename(filename):
     return entity_id
 
 
-def read_entity(paths, entity_id):
+def read_entity(entity_id):
     """Return a complete logical entity state, or None when it is absent."""
     entity_id = normalize_entity_id(entity_id)
-    path = entity_path(paths, entity_id)
-    if not path.exists():
+    entity_file = entity_path(entity_id)
+    if not entity_file.exists():
         return None
-    data = read_json_file(path)
+    data = read_json(entity_file)
     validate_entity_file(data, entity_id)
     return {"revision": data["revision"], "aspects": deepcopy(data["aspects"])}
 
 
-def write_entity(paths, entity_id, state):
+def write_entity(entity_id, state):
     """Replace one entity with its complete intended logical state."""
     entity_id = normalize_entity_id(entity_id)
     validate_entity_state(state)
     data = {"entity": entity_id, "revision": state["revision"], "aspects": normalize_aspects(state["aspects"])}
-    write_json_replace(entity_path(paths, entity_id), data)
+    write_json(entity_path(entity_id), data)
 
 
-def delete_entity(paths, entity_id):
+def delete_entity(entity_id):
     """Remove an entity file after a caller has authorized its deletion."""
-    path = entity_path(paths, normalize_entity_id(entity_id))
-    if path.exists():
-        path.unlink()
+    entity_file = entity_path(normalize_entity_id(entity_id))
+    if entity_file.exists():
+        entity_file.unlink()
 
 
-def list_entity_ids(paths):
+def list_entity_ids():
     """Return all entity IDs in stable lexical identifier order."""
     entity_ids = []
-    for path in paths["entities"].glob("*.json"):
-        entity_id = entity_id_from_filename(path.name)
-        data = read_json_file(path)
+    for entity_file in path("entities").glob("*.json"):
+        entity_id = entity_id_from_filename(entity_file.name)
+        data = read_json(entity_file)
         validate_entity_file(data, entity_id)
         entity_ids.append(entity_id)
     return sorted(entity_ids)
 
 
-def entity_path(paths, entity_id):
+def entity_path(entity_id):
     """Return the authoritative path for *entity_id*."""
-    return paths["entities"] / entity_filename(normalize_entity_id(entity_id))
+    return path("entities") / entity_filename(normalize_entity_id(entity_id))
 
 
 def validate_entity_file(data, expected_entity_id):
