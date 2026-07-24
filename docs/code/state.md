@@ -640,6 +640,55 @@ This recovery rule does not require a durable read or search outcome record. It 
 
 ---
 
+# Maintenance Requests
+
+Maintenance requests use this lifecycle:
+
+```text
+discovered
+    ↓
+claimed
+    ↓
+validated
+    ↓
+performed inside the sequential service boundary
+    ↓
+response delivery attempted
+    ↓
+completed or failed
+```
+
+Checkpoint and remove-old requests may create or remove operational and
+recovery artifacts, but they do not mutate M1 entity state, allocate a journal
+sequence, or advance root generation.
+
+An interrupted claimed maintenance request is recovered according to
+`protocol-maintenance.md` and the applicable snapshot/checkpoint or retention
+rules. Recovery inspects work already completed, resumes idempotently where
+possible, and must not treat an incomplete maintenance action as an M1
+transaction.
+
+Completed and failed maintenance records retain the complete original request
+and logical response. A duplicate terminal maintenance request reproduces that
+response without intentionally performing the maintenance operation again.
+
+## Stop Requests
+
+After a valid nonduplicate stop request becomes active:
+
+1. no later request begins;
+2. the successful stop response is delivered;
+3. the request is moved to `inbox-processing/completed/`;
+4. the service returns through normal shutdown;
+5. the `lionscliapp` writer lock is released through normal cleanup.
+
+If response delivery or terminal archival is interrupted, the stop request
+remains the active recovery obligation. No later request begins before it is
+resolved. The service does not deliberately perform an abrupt stop that
+bypasses response delivery, terminal archival, or normal lock release.
+
+---
+
 # Startup Recovery Order
 
 Before Subete announces `ready`, it performs recovery in this order.
@@ -700,6 +749,8 @@ For each file in `inbox-processing/claimed/`:
 * if its transaction is committed, reconstruct or redeliver the result and complete the request;
 * if its transaction is pending, associate it with journal recovery;
 * if it has no journal entry, resume validation and processing;
+* if it is maintenance, inspect any completed operational work and resume or
+  reproduce its maintenance outcome under `protocol-maintenance.md`;
 * if it already has a completed or failed record, resolve the duplicate without execution.
 
 ## 7. Inspect Required Derived Services

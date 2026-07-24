@@ -2,6 +2,7 @@
 title: Initial Development Process
 chatgpt: https://chatgpt.com/c/6a61091b-e724-83e8-9059-b23c3afc6674
 date: 2026-07-22
+updated: 2026-07-23
 ```
 
 ## Subete — Preparation and Implementation Sequence
@@ -258,6 +259,8 @@ Review the design with Wing-Cat. Compare it against the invariants, state machin
 **210. Have Codex implement the storage and format foundations.**
 Implement configuration loading, identity handling, entity-file reading and writing, request parsing, response writing, filenames, directory setup, and basic lionscliapp commands.
 
+2026-07-23 update: include root generation.json, FileTalk stale-file/reply-path configuration, and strict sequential service scaffolding.
+
 **220. Have Codex implement read operations.**
 Implement batched reads for selected aspects and all aspects, with generation reporting and clearly differentiated entity-not-found and aspect-not-found results.
 
@@ -267,8 +270,12 @@ Implement validation and computation of complete before-and-after entity states,
 **240. Have Codex implement journaling and transaction application.**
 Implement sequence allocation, pending journal creation, completion detection, entity-file mutation, committed-journal transition, generation advancement, and transaction responses.
 
+2026-07-23 update: include Version 1 link-cache preparation/publication with transaction application. It is required derived infrastructure, not deferred caching.
+
 **250. Have Codex implement startup recovery.**
 Implement handling for incomplete journal files, complete pending journal entries, partially applied transactions, fully applied but uncommitted transactions, and duplicate request delivery.
+
+2026-07-23 update: explicitly cover root-generation publication and cache states: prepared/updating, journal committed, root generation published, cache current.
 
 **260. Have Codex implement full-scan search.**
 Implement Version 1 search by scanning `entities/` directly. Do not add in-memory or on-disk indexes yet. Support every predicate and combination defined in the search protocol.
@@ -279,17 +286,25 @@ Implement `status.json`, `heartbeat.json`, and `metrics.json`, including current
 **280. Have Codex implement snapshots and checkpoints.**
 Implement snapshot creation, snapshot manifests, checkpoint records, restoration, and replay from the checkpoint boundary.
 
+2026-07-23 update: snapshots/checkpoints remain valid, but functional checkpoint/remove-old commands need a specified maintenance FileTalk family before implementation; do not invent it ad hoc.
+
 **290. Run the ordinary functional test suite.**
 Test creation, replacement, deletion, batched reads, all-aspect reads, search predicates, combined searches, malformed requests, duplicate requests, snapshots, checkpoints, and restoration.
 
+2026-07-23 update: include link-cache lookup/rebuild, dangling endpoint behavior, direct/incomplete FileTalk delivery, and repeat read/search behavior.
+
 **300. Run the complete crash-boundary test suite.**
 Inject failure at every named durable boundary and verify that restart always produces the correct authoritative state, correct generation, correct journal state, and safe request outcome.
+
+2026-07-23 update: explicitly cover root-generation publication and cache states: prepared/updating, journal committed, root generation published, cache current.
 
 **310. Perform a manual walking-example verification.**
 Run the documented examples against the real implementation and confirm that actual files and responses match the specification. Correct either the implementation or the specification wherever they disagree.
 
 **320. Conduct a Version 1 completion review with Wing-Cat.**
 Review the finished system against the scope index and invariants. Confirm that no deferred systems—caching, sharding, persistent search indexes, layering, or generalized runtime behavior—have accidentally entered Version 1.
+
+2026-07-23 update: change “no deferred systems—caching...” to “no deferred systems—other than the required Version 1 link cache—such as sharding, persistent search indexes, layering, or generalized runtime behavior.”
 
 **330. Tag and preserve Version 1.**
 Create the final Version 1 commit, update or create the corresponding frozen scope index with the implementation commit as appropriate, tag the release in Git, and preserve a known-good snapshot of a test Subete world.

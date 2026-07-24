@@ -440,9 +440,15 @@ An absent file in a stale or incomplete cache proves nothing.
 
 # Caller Interface
 
-Callers request attached links through the link-cache service rather than opening cache files directly.
+Public callers request links through the search protocol predicates
+`link-from`, `link-to`, and `link-attached-to`. They never open cache files or
+address the cache in a request.
 
-Conceptual operations are:
+Inside Subete, the search service may call the link-cache service rather than
+scanning authoritative entities when the cache is current for the searched
+generation.
+
+Conceptual internal operations are:
 
 ```text
 get_outgoing_links(entity)
@@ -847,7 +853,8 @@ If the cache is required for ready-state service and cannot be rebuilt, Subete m
 
 # Reads and Searches
 
-Ordinary entity reads do not require the link cache unless the caller explicitly requests attached-link lookup.
+Ordinary entity reads do not require the link cache. Public attached-link
+lookup is expressed through the search protocol's link endpoint predicates.
 
 Searches over authoritative link aspects may scan authoritative entities or use a future search index.
 

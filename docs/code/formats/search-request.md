@@ -61,13 +61,19 @@ Each file contains one complete JSON search request object.
       },
       {
         "title-contains": "subete"
+      },
+      {
+        "link-attached-to": "209ee0b8-36d5-4a47-81ca-c59f0eaac29d"
       }
     ]
   }
 }
 ```
 
-The complete definitions of search predicates, predicate combination, case sensitivity, tag matching, batching, result ordering, replies, validation, and errors belong to `protocol-search.md`.
+The complete definitions of search predicates, including link endpoint
+predicates, predicate combination, case sensitivity, tag matching, batching,
+result ordering, replies, validation, and errors belong to
+`protocol-search.md`.
 
 ## File Rules
 

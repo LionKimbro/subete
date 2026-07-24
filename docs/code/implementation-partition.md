@@ -26,22 +26,21 @@ subete gui
 subete setup
 subete checkpoint
 subete remove-old
+subete stop
 ```
 
 Additional diagnostic or maintenance commands may be added later.
 
-The primary configured path is:
+The database root is the framework execution root. It is selected with:
 
 ```text
-execpath.dbroot
+subete --execroot <database-root> <command>
 ```
-
-It identifies the root directory of the Subete database operated on or observed by the command.
 
 Within command execution:
 
 ```python
-dbroot = app.ctx["execpath.dbroot"]
+dbroot = app.execroot.get_execroot()
 ```
 
 is an absolute `pathlib.Path`.
@@ -93,7 +92,7 @@ The GUI may be a normal Tkinter command without single-instance enforcement.
 
 ## `subete setup`
 
-Creates or completes the filesystem structure for a Subete database at `execpath.dbroot`.
+Creates or completes the filesystem structure for the selected execution root.
 
 It may:
 
@@ -121,7 +120,8 @@ Requests creation of:
 2. validation of that snapshot;
 3. a checkpoint referring to the validated snapshot.
 
-This command should normally communicate with the running service through FileTalk.
+This command sends a `maintenance` request with operation `checkpoint` to the
+running service through FileTalk.
 
 It does not independently copy live authoritative files while the service may be mutating them.
 
@@ -143,13 +143,35 @@ Possible targets include:
 * abandoned temporary files;
 * old status-adjacent diagnostic artifacts.
 
-This command should normally send a maintenance request to the running service.
+This command sends a `maintenance` request with operation `remove-old` to the
+running service.
 
 The service determines what may safely be removed while preserving required recovery paths.
 
-`remove-old` must not independently infer that a journal, snapshot, or checkpoint is unnecessary merely from its age.
+`remove-old` must not independently infer that a journal, snapshot, or
+checkpoint is unnecessary merely from its age. The caller cannot supply
+artifact paths. The service selects every candidate.
 
-A future dry-run mode should report proposed removals without performing them.
+The command requires an explicit mode:
+
+```text
+subete --maintenance.mode dry-run remove-old
+subete --maintenance.mode execute remove-old
+```
+
+Dry-run reports the service's plan without removing artifacts. Execute asks
+the service to revalidate and perform that plan.
+
+## `subete stop`
+
+Sends a `maintenance` request with operation `stop` to the running service.
+
+The command waits for the successful response. The service delivers and
+terminally archives that response before returning through normal shutdown and
+releasing the writer lock.
+
+The command does not signal, kill, unlock, or otherwise directly control the
+service process.
 
 ---
 
@@ -170,19 +192,32 @@ It declares:
 
 It does not implement database semantics.
 
-## Principal Key
+## Root Binding
 
 ```python
-app.declare_key("execpath.dbroot", ".")
+app.declare_projectdir(".")
+app.set_flag("allow_projectdir_override", False)
+app.set_flag("uses_locking", True)
 ```
 
-The final default may be changed before implementation.
+`--execroot` is the sole database-root selector. Subete does not expose an
+independent configurable database-root key, because Lion acquires command locks
+before dispatching a command.
 
-The key means:
+The framework project root therefore equals the selected database root. Its
+optional `config.json` is framework-owned CLI configuration and remains
+distinct from Subete's `configuration.json`.
 
-> The root directory of the Subete database used by this invocation.
+Lock-requiring commands acquire `<database-root>/lock.json`.
 
-Every command that operates on a database uses the same resolved key.
+The command surface declares:
+
+```python
+app.declare_key("maintenance.mode", "")
+```
+
+`remove-old` requires an invocation override of `"dry-run"` or `"execute"`.
+The empty default prevents an unintentional destructive mode.
 
 ## Suggested Command Flags
 
@@ -203,9 +238,10 @@ checkpoint:
 
 remove-old:
     locking = false
-```
 
-The exact framework lock location must be arranged so that the lock protects the selected database root rather than merely an unrelated invocation directory.
+stop:
+    locking = false
+```
 
 Command functions should be small entry points that assemble configuration and call the responsible territory.
 
@@ -215,7 +251,7 @@ Command functions should be small entry points that assemble configuration and c
 
 The database-context territory derives and holds the fixed paths and configuration for one command invocation.
 
-From `execpath.dbroot`, it derives locations such as:
+From the selected execution root, it derives locations such as:
 
 ```text
 identity.json
@@ -405,7 +441,10 @@ It examines appropriate records such as:
 
 It owns the rule:
 
-> One transaction request ID produces at most one logical execution. Identical completed read and search requests may execute again because they are non-mutating.
+> One transaction request ID produces at most one logical execution. One
+> maintenance request ID produces at most one maintenance execution.
+> Identical completed read and search requests may execute again because they
+> are non-mutating.
 
 It determines whether a repeated request should:
 
@@ -414,11 +453,15 @@ It determines whether a repeated request should:
 * reproduce a committed transaction response;
 * reproduce a previous transaction or validation failure when required;
 * allow an identical completed read or search to execute again;
+* reproduce a terminal maintenance response without repeating checkpoint,
+  removal, or stop work;
 * be rejected because the same request ID was reused with different content.
 
 For an unfinished claimed read or search, it delegates to request recovery, which reruns the retained request at the unchanged generation under Subete's single-request execution model. Version 1 does not require completed or failed read/search records to preserve a replayable outcome; an identical completed read or search may execute again.
 
-It does not invent a new outcome for an already completed transaction.
+Completed and failed maintenance records retain their complete logical
+responses. The duplicate resolver does not invent a new outcome for an already
+completed transaction or maintenance operation.
 
 ---
 
@@ -605,10 +648,16 @@ It owns:
 * enumerating entity IDs;
 * loading the logical data required for predicates;
 * applying search predicates;
+* applying `link-from`, `link-to`, and `link-attached-to` predicates;
 * applying required Unicode comparisons;
 * collecting matching entity IDs;
 * sorting results;
 * reporting the committed generation searched.
+
+For link endpoint predicates, the scanner may use the link-cache service when
+the cache is current for the searched generation. The cache remains an
+internal optimization; the scanner returns matching link entity IDs and never
+exposes cache representation.
 
 The scanner should be written so that a future index-backed implementation may replace internal scanning without changing search protocol semantics.
 
@@ -797,7 +846,12 @@ inbox-processing/completed/
 inbox-processing/failed/
 ```
 
-Completed records preserve enough information to recognize duplicate requests. Committed transactions additionally preserve their reconstructible outcomes through journal history; completed reads and searches need not preserve result bodies.
+Completed records preserve enough information to recognize duplicate
+requests. Committed transactions additionally preserve their reconstructible
+outcomes through journal history. Completed and failed maintenance records
+preserve the complete original request and logical response so maintenance is
+not executed twice. Completed reads and searches need not preserve result
+bodies.
 
 Failed records preserve:
 
@@ -868,7 +922,13 @@ The same client functions may support command-line commands such as:
 ```text
 subete checkpoint
 subete remove-old
+subete stop
 ```
+
+The maintenance clients choose a unique reply file beneath the first
+configured `filetalk.allowed-reply-paths` directory, post one request to the
+selected database inbox, and patiently wait for one complete reply. If no
+allowed reply directory is configured, they fail before posting.
 
 The GUI should not have a private protocol implementation separate from the command-line maintenance clients.
 
@@ -1082,13 +1142,24 @@ respond
 archive
 ```
 
-For snapshot and maintenance requests:
+For checkpoint and remove-old maintenance requests:
 
 ```text
 validate
 perform controlled service operation
 respond
 archive
+```
+
+For a stop maintenance request:
+
+```text
+validate and accept active stop
+refuse to begin any later request
+deliver successful response
+archive stop request as completed
+return through normal shutdown
+release writer lock
 ```
 
 The architecture should not introduce worker pools, event buses, dependency injection frameworks, repository classes, or elaborate object graphs unless a demonstrated implementation need appears.
@@ -1099,11 +1170,14 @@ The important partition is semantic responsibility, not ceremony.
 
 # Non-Negotiable Rules
 
-* `execpath.dbroot` identifies the database root for every command.
+* The framework execution root identifies the database root for every command.
 * Only one authoritative service may own a database root at a time.
 * The GUI may have multiple instances because it observes status files and communicates through FileTalk.
 * The GUI never directly mutates authoritative state.
-* Maintenance commands should normally request work from the running service rather than race it on disk.
+* Maintenance commands request work from the running service through
+  FileTalk; they never race it on disk.
+* A successful stop response is delivered and terminally archived before the
+  service exits through normal lock-releasing shutdown.
 * Request intake, claiming, validation, planning, journaling, application, and commitment remain distinct responsibilities.
 * Entity storage hides the physical partition of logical entities across authoritative stores.
 * Transaction application operates from the durable journal entry.

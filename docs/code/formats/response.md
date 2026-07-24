@@ -1,11 +1,13 @@
 # Subete — Response Files
 
-Response files contain Subete replies to transaction, read, and search requests.
+Response files contain Subete replies to transaction, read, search, and
+maintenance requests.
 
 Their semantic structure and behavior are defined by:
 
 * [`protocol-crud.md`](../protocol-crud.md);
 * [`protocol-search.md`](../protocol-search.md);
+* [`protocol-maintenance.md`](../protocol-maintenance.md);
 * [`filetalk-protocol.md`](../filetalk-protocol.md).
 
 This document defines only the on-disk file conventions.
@@ -111,6 +113,29 @@ Each file contains one complete JSON response object.
 }
 ```
 
+### Maintenance Response
+
+```json
+{
+  "request-id": "8ae7f0c8-8727-4d51-89ad-7b6d92d8e750",
+  "request-type": "maintenance",
+  "status": "success",
+  "generation": 143,
+  "response": {
+    "operation": "checkpoint",
+    "snapshot": {
+      "file": "00000000000000000143__2026-07-23T23-09-42Z.zip",
+      "generation": 143
+    },
+    "checkpoint": {
+      "file": "00000000000000000143.json",
+      "generation": 143,
+      "replay-after": 143
+    }
+  }
+}
+```
+
 The complete definitions of success, failure, not-found results, generations, revisions, errors, duplicate delivery, and reply-delivery behavior belong to the governing protocol documents.
 
 ## File Rules
@@ -124,4 +149,7 @@ The complete definitions of success, failure, not-found results, generations, re
 * One file contains one response.
 * A response file is not authoritative entity state.
 * Failure to write a response does not reverse a completed request or committed transaction.
-* A retried transaction request should receive the previously recorded logical response rather than cause the transaction to execute again. Read and search requests may be executed again because they do not mutate authoritative state.
+* A retried transaction or maintenance request receives its previously
+  recorded logical response rather than causing the operation to execute
+  again. Read and search requests may be executed again because they do not
+  mutate authoritative or maintenance state.

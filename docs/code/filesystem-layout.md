@@ -8,6 +8,7 @@ The initial layout is:
 
 ```text
 subete-data/
+  config.json
   identity.json
   configuration.json
   generation.json
@@ -42,6 +43,13 @@ The database root may have any filesystem path. Programs must not depend on the 
 
 ## Root Files
 
+### `config.json`
+
+`config.json` is optional framework-owned `lionscliapp` CLI configuration. It is
+not Subete operational configuration, authoritative state, or part of the
+database protocol. The framework reads it when present and writes it only when
+its configuration is explicitly persisted.
+
 ### `identity.json`
 
 `identity.json` identifies the Subete database itself.
@@ -73,6 +81,10 @@ The exact format and transitional recovery rules are defined in `formats/generat
 ### `lock.json`
 
 `lock.json` is used by the surrounding `lionscliapp` command framework to coordinate commands and process ownership.
+
+Subete selects its database root through the framework execution root. Its
+framework project directory is `.`, so a lock-requiring command acquires
+`<database-root>/lock.json`.
 
 The locking framework determines which commands require exclusive access and which commands may safely operate without taking the primary writer lock.
 
@@ -209,7 +221,13 @@ A claimed request may still be awaiting validation, execution, recovery, or resp
 
 `inbox-processing/completed/` contains requests that completed successfully.
 
-Completed request records support inspection, auditing, and duplicate-request detection. For transactions, committed journal history supports recovery from uncertain response delivery; Version 1 does not require completed read or search records to retain their response bodies.
+Completed request records support inspection, auditing, and duplicate-request
+detection. For transactions, committed journal history supports recovery from
+uncertain response delivery. Completed and failed maintenance records retain
+their complete logical responses so checkpoint, removal, and stop outcomes can
+be reproduced without intentionally performing the operation again. Version 1
+does not require completed read or search records to retain their response
+bodies.
 
 Retention or compaction policy may later remove old completed requests when their required identity and transaction-outcome information remain safely represented elsewhere.
 
@@ -286,6 +304,7 @@ The initial paths have the following roles:
 
 | Path                          | Role                                                       |
 | ----------------------------- | ---------------------------------------------------------- |
+| `config.json`                 | Optional framework-owned CLI configuration                 |
 | `identity.json`               | Stable identity of the database                            |
 | `configuration.json`          | Operational configuration                                  |
 | `generation.json`             | Authoritative published committed generation               |

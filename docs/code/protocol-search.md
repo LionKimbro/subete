@@ -11,6 +11,9 @@ The initial search protocol supports predicates based on:
 * tags in the M1 basic aspect;
 * substrings within `name` in the M1 basic aspect;
 * substrings within `title` in the M1 basic aspect;
+* link entities whose `from` endpoint is a specified entity;
+* link entities whose `to` endpoint is a specified entity;
+* link entities attached in either direction to a specified entity;
 * combinations of these predicates.
 
 A single request may contain multiple independent searches.
@@ -119,6 +122,9 @@ has-aspects
 tags
 name-contains
 title-contains
+link-from
+link-to
+link-attached-to
 ```
 
 Additional predicates may be defined in later protocol versions.
@@ -420,6 +426,99 @@ Examples:
 
 ---
 
+# Link Endpoint Predicates
+
+The predicates `link-from`, `link-to`, and `link-attached-to` match link
+entities.
+
+A candidate entity matches a link endpoint predicate only when it contains a
+valid conventional M1 link aspect:
+
+```text
+tag:m1lattice.net,2026/aspect/link
+```
+
+with valid `from` and `to` entity IDs.
+
+An entity lacking the link aspect does not match. An entity whose link aspect
+is malformed does not match; encountering it does not fail the complete search
+request.
+
+Each endpoint predicate value is an `entity-id`. Accepted UUID input is
+canonicalized under the M1/Subete identifier rules before comparison. Tag URI
+values are preserved and compared exactly.
+
+## `link-from`
+
+Matches link entities whose `from` endpoint is the specified entity.
+
+```json
+{
+  "link-from": "11111111-1111-4111-8111-111111111111"
+}
+```
+
+Matching is:
+
+```text
+link aspect from = requested entity ID
+```
+
+## `link-to`
+
+Matches link entities whose `to` endpoint is the specified entity.
+
+```json
+{
+  "link-to": "22222222-2222-4222-8222-222222222222"
+}
+```
+
+Matching is:
+
+```text
+link aspect to = requested entity ID
+```
+
+## `link-attached-to`
+
+Matches link entities whose `from` or `to` endpoint is the specified entity.
+
+```json
+{
+  "link-attached-to": "11111111-1111-4111-8111-111111111111"
+}
+```
+
+Matching is:
+
+```text
+link aspect from = requested entity ID
+OR
+link aspect to = requested entity ID
+```
+
+The OR belongs inside this one predicate. The predicate as a whole is combined
+with every other supplied predicate using the normal search-level AND rule.
+
+A self-link whose `from` and `to` both equal the requested entity matches once.
+Its link entity ID appears at most once in the result.
+
+## Returned Identities
+
+These predicates return the IDs of matching link entities.
+
+They do not return:
+
+* the opposite endpoint entity;
+* endpoint pairs;
+* link aspect contents;
+* link-cache records.
+
+The caller may read returned link entities through the ordinary read protocol.
+
+---
+
 # Complete Combined Search Example
 
 ```json
@@ -509,6 +608,13 @@ The implementation may satisfy a search by:
 * consulting an authoritative store’s native query capabilities;
 * consulting a derived index known to reflect the required generation;
 * combining results from multiple authoritative and derived stores.
+
+The Version 1 link cache may satisfy the link endpoint predicates only when it
+is current for the searched committed generation. It is an internal
+optimization. Requests and responses never name the cache or reveal whether it
+was used. If the cache cannot supply a complete current answer, Subete must use
+a coherent authoritative scan or fail the search; it must not return stale or
+partial link results.
 
 The physical search method does not change the protocol’s matching semantics.
 
@@ -664,6 +770,7 @@ Before executing any search in the request, Subete validates:
 * that `has-aspects` contains valid, nonduplicate aspect IDs;
 * that `tags` contains nonempty, nonduplicate strings;
 * that substring predicates are nonempty strings.
+* that each supplied link endpoint predicate contains one valid entity ID.
 
 Validation does not modify authoritative state.
 
@@ -685,6 +792,9 @@ invalid-has-aspects-predicate
 invalid-tags-predicate
 invalid-name-contains-predicate
 invalid-title-contains-predicate
+invalid-link-from-predicate
+invalid-link-to-predicate
+invalid-link-attached-to-predicate
 
 duplicate-required-aspect
 duplicate-required-tag
@@ -723,7 +833,7 @@ This protocol deliberately does not define:
 * result limits;
 * sorting by arbitrary fields;
 * returning aspects alongside search results;
-* link traversal searches;
+* returning opposite endpoints or performing multi-hop link traversal;
 * historical-generation search.
 
 These capabilities may be defined separately if needed.
@@ -734,4 +844,5 @@ The central model remains:
 * each search contains one or more predicates;
 * all predicates within one search are combined using AND;
 * all searches observe one committed generation;
-* successful results contain deterministically ordered entity IDs only.
+* successful results contain deterministically ordered entity IDs only;
+* link endpoint predicates return matching link entity IDs.

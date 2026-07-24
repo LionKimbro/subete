@@ -62,15 +62,20 @@ Programs interact with Subete through an inbox-based FileTalk protocol.
 
 A request is written into the database inbox. Subete claims the request, processes it, and writes its response to the return destination specified by the request. This return destination follows the SASE principle: the request carries its own self-addressed return path.
 
-The first version supports three broad request families:
+The first version supports four broad request families:
 
 * transaction requests;
 * read requests;
-* search requests.
+* search requests;
+* maintenance requests.
 
 These are separate request types with separate semantics.
 
 Transaction requests change the world. Read requests retrieve known entity aspects. Search requests discover entity identifiers matching specified conditions.
+
+Maintenance requests ask the running service to create a snapshot/checkpoint,
+remove safely disposable old artifacts, or stop through normal shutdown.
+Maintenance does not mutate the M1 entity world or advance its generation.
 
 Multiple operations, reads, or searches may be included in a single request.
 
@@ -126,11 +131,18 @@ Version 1 supports searches such as:
 * all entities containing a required collection of tags;
 * all entities whose `basic.name` contains a substring;
 * all entities whose `basic.title` contains a substring;
+* link entities whose `from` endpoint is a specified entity;
+* link entities whose `to` endpoint is a specified entity;
+* link entities attached in either direction to a specified entity;
 * combinations of these conditions.
 
 A request may contain multiple searches.
 
-Version 1 performs searches by scanning authoritative entity files directly. It does not maintain persistent or in-memory indexes.
+Version 1 performs ordinary searches by scanning authoritative entity files
+directly. Link endpoint predicates may use the required current link cache as
+an internal optimization. The public search protocol returns matching link
+entity IDs and does not expose cache representation. Version 1 does not
+maintain persistent or in-memory search indexes.
 
 Later versions may introduce derived indexes for:
 
