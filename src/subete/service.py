@@ -1,29 +1,21 @@
 """Strictly sequential non-mutating FileTalk service slice."""
 import time
-from . import state
-from .filetalk import (
-    archive_completed_request,
-    archive_failed_request,
-    claim_inbox_message,
-    deliver_reply,
-    discover_messages,
-)
+from . import filetalk, state
 from .requests import execute_request
 from .setup import validate_database
 from .recovery import recover_pending
 
 def process_one():
     state.update_now()
-    messages = discover_messages()
-    if not messages: return False
-    candidate = messages[0]; claimed = claim_inbox_message(candidate["path"])
+    if not filetalk.discover_next_message(): return False
+    filetalk.claim_message()
     try:
-        message = candidate["message"]
+        message = filetalk.current["message"]
         response = execute_request(state.g["database-id"], message)
-        deliver_reply(message["reply"], response)
-        archive_completed_request(claimed, {"status": "success", "response": response})
+        filetalk.deliver_reply(response)
+        filetalk.complete_request({"status": "success", "response": response})
     except (OSError, ValueError) as error:
-        archive_failed_request(claimed, {"status": "failure", "error": str(error)})
+        filetalk.fail_request({"status": "failure", "error": str(error)})
     return True
 
 def run_service():

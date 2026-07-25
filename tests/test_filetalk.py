@@ -2,14 +2,7 @@ import json
 
 import pytest
 
-from subete import state
-from subete.filetalk import (
-    claim_inbox_message,
-    deliver_reply,
-    discover_messages,
-    list_stale_unreadable_messages,
-    reset_filetalk_observations,
-)
+from subete import filetalk, state
 from subete.paths import path
 from subete.setup import setup_database
 
@@ -25,18 +18,20 @@ def test_discovery_skips_incomplete_then_claims_complete_object(tmp_path, use_da
     monkeypatch.setattr(state.time, "time", lambda: now["value"])
     candidate = path("inbox") / "request.json"
     candidate.write_text('{"request-id":', encoding="utf-8")
-    reset_filetalk_observations()
+    filetalk.reset_filetalk_observations()
     state.update_now()
-    assert discover_messages() == []
+    assert not filetalk.discover_next_message()
     now["value"] = 21
     state.update_now()
-    assert list_stale_unreadable_messages() == [candidate]
+    assert filetalk.list_stale_unreadable_messages() == [candidate]
     candidate.write_text('{"request-id":"ok"}', encoding="utf-8")
     now["value"] = 22
     state.update_now()
-    messages = discover_messages()
-    assert messages[0]["message"] == {"request-id": "ok"}
-    assert claim_inbox_message(candidate).parent == path("claimed")
+    assert filetalk.discover_next_message()
+    assert filetalk.current["message"] == {"request-id": "ok"}
+    filetalk.claim_message()
+    assert filetalk.current["path"].parent == path("claimed")
+    assert filetalk.current["location"] == "claimed"
 
 
 def test_discovery_does_not_claim_complete_non_object(tmp_path, use_database, monkeypatch):
@@ -44,7 +39,7 @@ def test_discovery_does_not_claim_complete_non_object(tmp_path, use_database, mo
     monkeypatch.setattr(state.time, "time", lambda: 1)
     (path("inbox") / "array.json").write_text("[]", encoding="utf-8")
     state.update_now()
-    assert discover_messages() == []
+    assert not filetalk.discover_next_message()
 
 
 def test_reply_delivery_requires_configured_external_absolute_path(tmp_path, use_database):
@@ -53,11 +48,13 @@ def test_reply_delivery_requires_configured_external_absolute_path(tmp_path, use
     replies.mkdir()
     state.configuration["filetalk"]["allowed-reply-paths"] = [str(replies)]
     target = replies / "answer.json"
-    delivered = deliver_reply({"type": "file", "path": str(target)}, {"ok": True})
+    filetalk.current["message"] = {"reply": {"type": "file", "path": str(target)}}
+    delivered = filetalk.deliver_reply({"ok": True})
     assert delivered == target
     assert json.loads(target.read_text(encoding="utf-8")) == {"ok": True}
     with pytest.raises(ValueError, match="invalid"):
-        deliver_reply({"type": "file", "path": str(path("root") / "bad.json")}, {})
+        filetalk.current["message"] = {"reply": {"type": "file", "path": str(path("root") / "bad.json")}}
+        filetalk.deliver_reply({})
 
 
 def test_reply_delivery_rejects_an_allowed_root_escape_through_a_symlink(tmp_path, use_database):
@@ -76,10 +73,8 @@ def test_reply_delivery_rejects_an_allowed_root_escape_through_a_symlink(tmp_pat
     state.configuration["filetalk"]["allowed-reply-paths"] = [str(replies)]
 
     with pytest.raises(ValueError, match="invalid"):
-        deliver_reply(
-            {"type": "file", "path": str(escape / "answer.json")},
-            {"ok": True},
-        )
+        filetalk.current["message"] = {"reply": {"type": "file", "path": str(escape / "answer.json")}}
+        filetalk.deliver_reply({"ok": True})
 
 
 def test_reply_delivery_accepts_an_allowed_root_that_is_a_symlink(tmp_path, use_database):
@@ -96,7 +91,8 @@ def test_reply_delivery_accepts_an_allowed_root_that_is_a_symlink(tmp_path, use_
     state.configuration["filetalk"]["allowed-reply-paths"] = [str(configured_replies)]
     target = actual_replies / "answer.json"
 
-    delivered = deliver_reply({"type": "file", "path": str(target)}, {"ok": True})
+    filetalk.current["message"] = {"reply": {"type": "file", "path": str(target)}}
+    delivered = filetalk.deliver_reply({"ok": True})
 
     assert delivered == target
 
@@ -106,7 +102,5 @@ def test_reply_delivery_rejects_the_database_root_even_when_it_is_configured(tmp
     state.configuration["filetalk"]["allowed-reply-paths"] = [str(path("root"))]
 
     with pytest.raises(ValueError, match="invalid"):
-        deliver_reply(
-            {"type": "file", "path": str(path("root") / "answer.json")},
-            {"ok": True},
-        )
+        filetalk.current["message"] = {"reply": {"type": "file", "path": str(path("root") / "answer.json")}}
+        filetalk.deliver_reply({"ok": True})
