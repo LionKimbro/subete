@@ -1,6 +1,5 @@
 """The sequential FileTalk request lifecycle."""
 
-import shutil
 from pathlib import Path
 
 from . import fsio, state
@@ -8,78 +7,54 @@ from .fsio import write_json
 from .paths import path
 
 
-current = {
-    "path": None,
-    "message": None,
-    "location": None,
-}
-
 observations = {}
 
+selected = {
+    "name": None,
+    "path": None,
+    "message": None,
+}
 
-def init_filetalk():
-    """Resolve FileTalk's fixed directories for this process."""
-    _clear_current_request()
-    reset_filetalk_observations()
+
+def system_init_filetalk():
+    """Reset FileTalk's observations for a fresh service run."""
+    _reset_filetalk_observations()
+    clear_selected()
 
 
 def discover_next_message():
-    """Load the first stable complete inbox message into the current register."""
-    _clear_current_request()
+    """Select the first stable complete inbox message for possession."""
+    clear_selected()
 
     for message_file in sorted(path("inbox").iterdir(), key=lambda item: item.name):
         if not message_file.is_file():
             continue
 
-        fsio.read_json(message_file)
-
+        fsio.read_file(message_file, ["json", "stat"])
         status = fsio.read["status"]
-        data = fsio.read["data"]
+        data = fsio.read["value"]
 
         if status == "complete" and isinstance(data, dict):
-            current["path"] = message_file
-            current["message"] = data
-            current["location"] = "inbox"
             observations.pop(message_file, None)
+            selected["name"] = message_file.name
+            selected["path"] = message_file
+            selected["message"] = data
             return True
 
-        _record_unreadable_message(message_file)
+        _record_unreadable_message()
 
     return False
 
 
-def claim_message():
-    """Move the current inbox message to claimed storage."""
-    source = current["path"]
-    destination = path("claimed") / source.name
+def deliver_reply_back_to_sender():
+    """Publish the possessed request's response to its permitted destination."""
+    from . import request
 
-    if destination.exists():
-        if source.exists() and source.read_bytes() == destination.read_bytes():
-            source.unlink()
-        else:
-            raise ValueError("request claim collision")
-    else:
-        source.replace(destination)
-
-    current["path"] = destination
-    current["location"] = "claimed"
-
-
-def deliver_reply(response):
-    """Write one response to the current message's permitted reply destination."""
-    destination = _validate_reply_destination(current["message"]["reply"])
+    reply = request.current["message"]["reply"]
+    response = request.current["response"]
+    destination = _validate_reply_destination(reply)
     write_json(destination, response)
     return destination
-
-
-def complete_request(record):
-    """Archive the current claimed request as completed."""
-    _archive_current_request("completed", record)
-
-
-def fail_request(record):
-    """Archive the current claimed request as failed."""
-    _archive_current_request("failed", record)
 
 
 def list_stale_unreadable_messages():
@@ -93,17 +68,18 @@ def list_stale_unreadable_messages():
     ]
 
 
-def reset_filetalk_observations():
+def _reset_filetalk_observations():
     """Clear incomplete-file observations for a fresh service run."""
     observations.clear()
 
 
-def _record_unreadable_message(message_file):
+def _record_unreadable_message():
     """Record one unreadable message's changing filesystem facts."""
-    stat = message_file.stat()
+    message_file = fsio.read["source"]
+    stat = fsio.read["stat"]
     current_facts = {
-        "size": stat.st_size,
-        "mtime": stat.st_mtime_ns,
+        "size": stat["size"],
+        "mtime": stat["mtime"],
         "first-seen": state.g["now"],
         "last-change": state.g["now"],
     }
@@ -119,6 +95,13 @@ def _record_unreadable_message(message_file):
             current_facts["last-change"] = prior_facts["last-change"]
 
     observations[message_file] = current_facts
+
+
+def clear_selected():
+    """Clear the transient message selected for request possession."""
+    selected["name"] = None
+    selected["path"] = None
+    selected["message"] = None
 
 
 def _validate_reply_destination(reply):
@@ -147,29 +130,6 @@ def _validate_reply_destination(reply):
             return parent / destination.name
 
     raise ValueError("invalid-reply-destination")
-
-
-def _archive_current_request(location, record):
-    """Move the current request to one terminal location and write its record."""
-    destination = path(location) / current["path"].name
-
-    if destination.exists():
-        raise ValueError("terminal request collision")
-
-    destination.mkdir()
-    request_file = destination / "request.json"
-    shutil.move(str(current["path"]), str(request_file))
-    current["path"] = request_file
-    current["location"] = location
-    write_json(destination / "record.json", record)
-    _clear_current_request()
-
-
-def _clear_current_request():
-    """Clear FileTalk's current request register."""
-    current["path"] = None
-    current["message"] = None
-    current["location"] = None
 
 
 def _is_beneath(candidate_path, root):

@@ -77,7 +77,7 @@ def test_existing_database_requires_a_complete_configuration_file(tmp_path, use_
     setup_database()
     path("configuration").unlink()
 
-    with pytest.raises(ValueError, match="missing: configuration.json"):
+    with pytest.raises(ValueError, match="required file read failed: missing:"):
         init.init_system()
 
 
@@ -249,7 +249,7 @@ def test_setup_rejects_incomplete_durable_configuration_json(tmp_path, use_datab
     setup_database()
     path("configuration").write_text('{"configuration-version":', encoding="utf-8")
 
-    with pytest.raises(ValueError, match="incomplete: configuration.json"):
+    with pytest.raises(ValueError, match="required file read failed: invalid:"):
         init.init_system()
 
 

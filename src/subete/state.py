@@ -22,15 +22,15 @@ def load_existing_database_id():
     if not path("identity").is_file():
         return
 
-    fsio.read_json("identity", ["required"])
-    identity = fsio.read["data"]
+    fsio.read_file("identity", ["required", "json"])
+    identity = fsio.read["value"]
     g["database-id"] = identity["database-id"]
 
 
 def load_database_id_right_after_creation():
     """Load the database ID from the identity record just written by setup."""
-    fsio.read_json("identity", ["required"])
-    g["database-id"] = fsio.read["data"]["database-id"]
+    fsio.read_file("identity", ["required", "json"])
+    g["database-id"] = fsio.read["value"]["database-id"]
 
 
 def update_now():
@@ -46,5 +46,5 @@ def load_configuration():
         return
 
     validate_database_configuration()
-    fsio.read_json("configuration", ["required"])
-    configuration.update(fsio.read["data"])
+    fsio.read_file("configuration", ["required", "json"])
+    configuration.update(fsio.read["value"])

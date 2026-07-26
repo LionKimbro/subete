@@ -73,8 +73,8 @@ def commit_pending(pending, database_id):
 def read_validated_journal_entry(journal_file):
     """Read one journal entry after verifying the filename agrees with it."""
     filename_facts = parse_journal_filename(journal_file.name)
-    fsio.read_json(journal_file, ["required"])
-    entry = fsio.read["data"]
+    fsio.read_file(journal_file, ["required", "json"])
+    entry = fsio.read["value"]
 
     if not isinstance(entry, dict):
         raise ValueError("journal entry must contain one JSON object")

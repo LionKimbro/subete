@@ -39,7 +39,7 @@ def init_path(name, value, flags=None):
     }
 
 
-def init_filesystem_paths():
+def system_init_filesystem_paths():
     """Install the filesystem facts for Lionscliapp's selected execution root."""
     root = Path(app.execroot.get_execroot()).expanduser().resolve()
     journal = root / "journal"

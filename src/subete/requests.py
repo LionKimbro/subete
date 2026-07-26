@@ -6,8 +6,11 @@ from .searches import execute_searches
 from .transactions import plan_transaction
 from .journal import apply_pending, commit_pending, write_pending
 from .link_cache import rebuild
+from . import request, state
 
-def execute_request(database_id, message):
+def execute_request():
+    message = request.current["message"]
+    database_id = state.g["database-id"]
     validate_envelope(message)
     generation = read_generation()
     if message["request-type"] == "transaction":
@@ -22,7 +25,7 @@ def execute_request(database_id, message):
         response = {"reads": execute_reads(message["request"]["reads"])}
     else:
         response = {"searches": execute_searches(message["request"]["searches"])}
-    return {"request-id": message["request-id"], "request-type": message["request-type"], "status": "success", "generation": generation, "response": response}
+    request.set_response({"request-id": message["request-id"], "request-type": message["request-type"], "status": "success", "generation": generation, "response": response})
 
 def validate_envelope(message):
     if not isinstance(message, dict) or set(message) != {"request-id", "request-type", "reply", "request"}:

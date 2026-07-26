@@ -9,40 +9,66 @@ from .paths import path
 
 
 read = {
-    "data": None,
     "status": None,
-    "path": None,
+    "source": None,
+    "stat": None,
+    "raw": None,
+    "value": None,
+    "error": None,
 }
 
 
-def read_json(source, flags=None):
-    """Read JSON into the current read register and return its status."""
+def read_file(source, flags=None):
+    """Read a file into the current read register and return its status."""
     if flags is None:
         flags = []
 
+    read.update(
+        {
+            "status": None,
+            "source": source,
+            "stat": None,
+            "raw": None,
+            "value": None,
+            "error": None,
+        }
+    )
+
     if isinstance(source, str):
         source = path(source)
+        read["source"] = source
 
     if not isinstance(source, Path):
-        raise TypeError("read_json source must be a territory name or Path")
-
-    read["data"] = None
-    read["path"] = source
+        read["status"] = "invalid"
+        read["error"] = "invalid-source"
+        raise TypeError("read_file source must be a territory name or Path")
 
     try:
-        with source.open("r", encoding="utf-8") as handle:
-            read["data"] = json.load(handle, parse_constant=_reject_non_json_constant)
+        if "stat" in flags:
+            facts = source.stat()
+            read["stat"] = {"size": facts.st_size, "mtime": facts.st_mtime_ns}
+
+        read["raw"] = source.read_bytes()
+
+        if "json" in flags:
+            read["value"] = json.loads(
+                read["raw"].decode("utf-8"),
+                parse_constant=_reject_non_json_constant,
+            )
     except FileNotFoundError:
         read["status"] = "missing"
+        read["error"] = "missing"
     except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
-        read["status"] = "incomplete"
+        read["status"] = "invalid"
+        read["error"] = "invalid-json"
     except OSError:
         read["status"] = "unreadable"
+        read["error"] = "unreadable"
     else:
         read["status"] = "complete"
 
     if "required" in flags and read["status"] != "complete":
-        raise ValueError(f"required JSON file is {read['status']}: {source.name}")
+        raise ValueError(f"required file read failed: {read['status']}: {source.resolve()}")
 
     return read["status"]
 

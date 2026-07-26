@@ -122,8 +122,8 @@ def read_entity(entity_id):
     if not entity_file.exists():
         return None
 
-    fsio.read_json(entity_file, ["required"])
-    record = fsio.read["data"]
+    fsio.read_file(entity_file, ["required", "json"])
+    record = fsio.read["value"]
 
     return {
         "revision": record["revision"],

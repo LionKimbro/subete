@@ -13,6 +13,7 @@ from subete.journal import (
 )
 from subete.paths import path
 from subete.recovery import recover_pending
+from subete import request
 from subete.setup import setup_database
 from subete.requests import execute_request
 
@@ -32,8 +33,9 @@ def test_transaction_request_journals_before_publishing_generation(tmp_path, use
     identity = __import__('json').loads(path("identity").read_text())["database-id"]
     entity = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     message = {"request-id":"22222222-2222-4222-8222-222222222222","request-type":"transaction","reply":{},"request":{"operations":[{"operation":"create-entity","entity":entity,"aspects":{}}]}}
-    response = execute_request(identity, message)
-    assert response["generation"] == 1
+    request.current["message"] = message
+    execute_request()
+    assert request.current["response"]["generation"] == 1
     assert read_entity(entity)["revision"] == 1
 
 
@@ -65,7 +67,7 @@ def test_recovery_rejects_a_journal_filename_that_disagrees_with_its_entry(tmp_p
     pending.write_text(json.dumps(entry), encoding="utf-8")
 
     with pytest.raises(ValueError, match="filename sequence"):
-        recover_pending(database_id)
+        recover_pending()
 
 
 def test_journal_read_rejects_a_noncanonical_entity_id(tmp_path, use_database):
@@ -127,7 +129,8 @@ def test_journal_stores_canonical_entity_and_aspect_ids_from_a_transaction_reque
         },
     }
 
-    execute_request(database_id, message)
+    request.current["message"] = message
+    execute_request()
     journal_file = next(path("journal_committed").glob("*.json"))
     entry = json.loads(journal_file.read_text())
     operation = entry["transaction-request"]["request"]["operations"][0]

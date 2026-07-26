@@ -8,49 +8,58 @@ from subete.paths import path
 from subete.setup import setup_database
 
 
-def test_read_json_accepts_a_named_territory_or_explicit_path(tmp_path, use_database):
+def test_read_file_accepts_a_named_territory_or_explicit_path(tmp_path, use_database):
     use_database(tmp_path / "database")
     setup_database()
 
-    assert fsio.read_json("identity") == "complete"
-    identity = fsio.read["data"]
+    assert fsio.read_file("identity", ["json", "stat"]) == "complete"
+    identity = fsio.read["value"]
+    assert fsio.read["source"] == path("identity")
+    assert fsio.read["raw"]
+    assert fsio.read["stat"]["size"] == path("identity").stat().st_size
 
     explicit_file = tmp_path / "external.json"
     explicit_file.write_text(json.dumps({"kind": "external"}), encoding="utf-8")
 
-    assert fsio.read_json(path("identity")) == "complete"
-    assert identity == fsio.read["data"]
-    assert fsio.read_json(explicit_file) == "complete"
-    assert fsio.read["data"] == {"kind": "external"}
+    assert fsio.read_file(path("identity"), ["json"]) == "complete"
+    assert identity == fsio.read["value"]
+    assert fsio.read_file(explicit_file, ["json"]) == "complete"
+    assert fsio.read["value"] == {"kind": "external"}
 
 
 def test_required_read_rejects_a_missing_named_territory(tmp_path, use_database):
     use_database(tmp_path / "database")
 
-    with pytest.raises(ValueError, match="required JSON file is missing: identity.json"):
-        fsio.read_json("identity", ["required"])
+    with pytest.raises(ValueError, match="required file read failed: missing:"):
+        fsio.read_file("identity", ["required", "json"])
 
     assert fsio.read == {
-        "data": None,
+        "source": path("identity"),
         "status": "missing",
-        "path": path("identity"),
+        "stat": None,
+        "raw": None,
+        "value": None,
+        "error": "missing",
     }
 
 
-def test_read_json_records_an_incomplete_document(tmp_path, use_database):
+def test_read_file_records_an_invalid_document(tmp_path, use_database):
     use_database(tmp_path / "database")
     incomplete_file = tmp_path / "incomplete.json"
     incomplete_file.write_text('{"kind":', encoding="utf-8")
 
-    assert fsio.read_json(incomplete_file) == "incomplete"
+    assert fsio.read_file(incomplete_file, ["json"]) == "invalid"
     assert fsio.read == {
-        "data": None,
-        "status": "incomplete",
-        "path": incomplete_file,
+        "status": "invalid",
+        "source": incomplete_file,
+        "stat": None,
+        "raw": b'{"kind":',
+        "value": None,
+        "error": "invalid-json",
     }
 
 
-def test_read_json_records_an_unreadable_file(tmp_path, use_database, monkeypatch):
+def test_read_file_records_an_unreadable_file(tmp_path, use_database, monkeypatch):
     use_database(tmp_path / "database")
     unreadable_file = tmp_path / "unreadable.json"
     unreadable_file.write_text("{}", encoding="utf-8")
@@ -60,24 +69,30 @@ def test_read_json_records_an_unreadable_file(tmp_path, use_database, monkeypatc
 
     monkeypatch.setattr(fsio.Path, "open", reject_open)
 
-    assert fsio.read_json(unreadable_file) == "unreadable"
+    assert fsio.read_file(unreadable_file, ["json"]) == "unreadable"
     assert fsio.read == {
-        "data": None,
+        "source": unreadable_file,
         "status": "unreadable",
-        "path": unreadable_file,
+        "stat": None,
+        "raw": None,
+        "value": None,
+        "error": "unreadable",
     }
 
 
-def test_read_json_records_complete_json_null(tmp_path, use_database):
+def test_read_file_records_complete_json_null(tmp_path, use_database):
     use_database(tmp_path / "database")
     null_file = tmp_path / "null.json"
     null_file.write_text("null", encoding="utf-8")
 
-    assert fsio.read_json(null_file) == "complete"
+    assert fsio.read_file(null_file, ["json"]) == "complete"
     assert fsio.read == {
-        "data": None,
+        "source": null_file,
         "status": "complete",
-        "path": null_file,
+        "stat": None,
+        "raw": b"null",
+        "value": None,
+        "error": None,
     }
 
 
@@ -90,10 +105,10 @@ def test_write_json_accepts_a_named_territory_or_explicit_path(tmp_path, use_dat
     explicit_file = tmp_path / "external.json"
     write_json(explicit_file, {"kind": "external"})
 
-    assert fsio.read_json("configuration") == "complete"
-    assert fsio.read["data"] == {"kind": "configuration"}
-    assert fsio.read_json(explicit_file) == "complete"
-    assert fsio.read["data"] == {"kind": "external"}
+    assert fsio.read_file("configuration", ["json"]) == "complete"
+    assert fsio.read["value"] == {"kind": "configuration"}
+    assert fsio.read_file(explicit_file, ["json"]) == "complete"
+    assert fsio.read["value"] == {"kind": "external"}
 
 
 def test_write_json_uses_a_temporary_file_inside_the_database_root(tmp_path, use_database, monkeypatch):
